@@ -36,8 +36,8 @@ app = Flask(__name__)
 knowledge = KnowledgeBase(os.path.join(BASE_DIR, "knowledge"))
 print("✅ Znalosti načteny.")
 
-def load_memory():
-    """Load the conversation memory limited to the most recent entries."""
+def _read_memory_file():
+    """Return memory entries loaded from disk respecting the limit."""
     if os.path.exists(memory_path):
         with open(memory_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
@@ -46,19 +46,34 @@ def load_memory():
             return [json.loads(line) for line in lines if line.strip()]
     return []
 
-def append_to_memory(user_msg, ai_response):
-    """Append a new exchange to memory and truncate the file if necessary."""
-    with open(memory_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps({"user": user_msg, "jarvik": ai_response}) + "\n")
+# Cache memory at startup
+memory_cache = _read_memory_file()
 
-    # Truncate file to the most recent MAX_MEMORY_ENTRIES lines
-    if MAX_MEMORY_ENTRIES:
-        with open(memory_path, "r+", encoding="utf-8") as f:
-            lines = f.readlines()
-            if len(lines) > MAX_MEMORY_ENTRIES:
-                f.seek(0)
-                f.writelines(lines[-MAX_MEMORY_ENTRIES:])
-                f.truncate()
+def load_memory():
+    """Return the cached conversation memory."""
+    return memory_cache
+
+def reload_memory() -> list[dict]:
+    """Reload conversation history from disk into the cache."""
+    global memory_cache
+    memory_cache = _read_memory_file()
+    return memory_cache
+
+def append_to_memory(user_msg, ai_response):
+    """Append a new exchange to the in-memory cache and persist it."""
+    global memory_cache
+    entry = {"user": user_msg, "jarvik": ai_response}
+    memory_cache.append(entry)
+    if MAX_MEMORY_ENTRIES and len(memory_cache) > MAX_MEMORY_ENTRIES:
+        memory_cache = memory_cache[-MAX_MEMORY_ENTRIES:]
+    flush_memory()
+
+def flush_memory() -> None:
+    """Write the cached memory to disk respecting the entry limit."""
+    lines = memory_cache[-MAX_MEMORY_ENTRIES:] if MAX_MEMORY_ENTRIES else memory_cache
+    with open(memory_path, "w", encoding="utf-8") as f:
+        for item in lines:
+            f.write(json.dumps(item) + "\n")
 
 def search_memory(query, memory_entries):
     results = []
@@ -238,6 +253,7 @@ def knowledge_search():
 def knowledge_reload():
     """Reload knowledge base files and return how many chunks were loaded."""
     knowledge.reload()
+    reload_memory()
     print("✅ Znalosti načteny.")
     return jsonify({"status": "reloaded", "chunks": len(knowledge.chunks)})
 
