@@ -1,0 +1,166 @@
+# Jarvik‑AI: "Blbůzdorný" návod & databáze chyb
+
+## 0. Stručný scénář
+
+1. Notebook (Ubuntu 24.04) s Jarvikem běží na `localhost:8000`.
+2. Caddy reverse‑proxy poslouchá na 80/443 a přepojuje na Jarvik.
+3. Veřejná **pouze** IPv6 `2a00:1028:c000:16fe:a782:9e10:5d65:3569` (žádná IPv4).
+4. Doména `jarvik-ai.tech` (registr Webglobe) → později delegovaná na Cloudflare.
+5. Domácí router **O2 SmartBox** dělá IPv6 firewall.
+
+---
+
+## 1. Router O2 SmartBox
+
+```text
+Nastavení → Firewall → IPv6 pravidla
+  Název       : Jarvik HTTPS
+  Protokol    : TCP
+  Cíl port    : 80,443
+  Zdroj IP    : ::/0 (všichni)
+  Cíl IP      : tvá IPv6 / nebo ::/0
+Uložit → Restart routeru
+```
+
+**Časté chyby**
+
+* Pravidlo přidáš, ale nezrestartuješ ―> port stále zavřený.
+* Pravidlo vytvoříš pro IPv4 místo IPv6.
+
+---
+
+## 2. Caddyfile ( `/etc/caddy/Caddyfile` )
+
+```caddy
+# staging ACME, ať se nevyčerpá rate‑limit
+# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+# acme_dns ...               # (volitelné dns‑01)
+jarvik-ai.tech {
+    reverse_proxy 127.0.0.1:8000
+}
+```
+
+```bash
+sudo systemctl reload caddy
+journalctl -u caddy -f | grep -Ei "acme|obtain|certificate"
+```
+
+**Časté chyby**
+
+* Ponechaný e‑mail `you@example.com` → ACME 400 „invalidContact“.
+* Zapomeneš odstranit `acme_ca` po úspěšném stagingu ⇒ jedeš pořád na test‑certifikát.
+
+---
+
+## 3. DNS na Webglobe (do aktivace NS → Cloudflare)
+
+### 3.1 Rychlé IPv6‑only
+
+1. *Domény → DNS záznamy → Nový* →
+
+```
+Jméno  : @
+Typ    : AAAA
+Hodnota: 2a00:1028:c000:16fe:a782:9e10:5d65:3569
+TTL    : 300
+```
+
+2. Zvedni **SOA serial** při ruční editaci zóny.
+3. (Volitelně) přidej `www` CNAME → `@`.
+
+### 3.2 Úplná delegace na Cloudflare
+
+1. Dokonči platbu + e‑mail **Verify** → WHOIS musí ukázat `Status: ok`.
+2. *Domény → DNS servery → Typ DNS **Vlastní***
+3. Vyber DNS skupinu `Jarvik`:
+
+```
+ada.ns.cloudflare.com
+nick.ns.cloudflare.com
+```
+
+4. Zaškrtni autorizaci → e‑mail potvrzení → klik **Souhlasím**.
+5. Cloudflare dashboard přepne z *Pending* na **Active** \~10 min.
+
+**Časté chyby**
+
+* Doména ve stavu `pendingCreate` → Webglobe neukáže tlačítko „Uložit“.
+* SOA serial nezvednutý → změna zóny se neprojeví.
+
+---
+
+## 4. Testovací příkazy
+
+```bash
+# DNS
+whois jarvik-ai.tech | grep -Ei "Status|Created"
+dig +short jarvik-ai.tech AAAA
+
+dig @ns1.webglobe.cz jarvik-ai.tech AAAA +short   # přímo autoritativní
+
+dig NS jarvik-ai.tech +short   # po Cloudflare → ada./nick.
+
+# HTTP
+curl -6 -I https://jarvik-ai.tech           # 200 nebo 308
+curl -6 -I https://www.jarvik-ai.tech
+curl -4 -I https://jarvik-ai.tech           # 200 po CF, timeout předtím
+```
+
+---
+
+## 5. Lokální DNS & cache (Ubuntu 24.04 Wi‑Fi)
+
+```bash
+# aktivní profil zjistíš
+nmcli connection show
+
+# nastavit veřejné IPv6 DNS
+sudo nmcli connection modify "Internet" \
+     ipv6.dns "2606:4700:4700::1111,2001:4860:4860::8888" \
+     ipv6.ignore-auto-dns yes \
+     ipv4.ignore-auto-dns yes
+sudo nmcli connection up "Internet"
+
+# flush cache
+sudo resolvectl flush-caches
+```
+
+**Časté chyby**
+
+* `communications error to 8.8.8.8#53` → router blokuje IPv4 DNS → používej IPv6 resolver.
+* Příkaz `systemd-resolve --flush-caches` neexistuje → na 24.04 je `resolvectl`.
+
+---
+
+## 6. Checklist (pro budoucí migrace)
+
+* [ ] Porty 80/443 otevřené až do notebooku (UFW + router IPv6 rule).
+* [ ] Caddy poslouchá `*:443` ( `lsof -i -P -n | grep 443` ).
+* [ ] ACME staging → prod (Let’s Encrypt rate‑limit!).
+* [ ] AAAA nebo NS → správně propagované (dig 1.1.1.1).
+* [ ] SOA serial vždy +1.
+* [ ] `www` alias existuje.
+* [ ] Lokální DNS cache vyprázdněná při testování.
+
+---
+
+### 🛠️ Reprodukované chyby & jejich fix
+
+| # | Symptom                                   | Root Cause                         | Fix                                    |
+| - | ----------------------------------------- | ---------------------------------- | -------------------------------------- |
+| 1 | `curl -6 ...`: *Could not resolve host*   | Zóna uložená, ale SOA serial starý | Zvednout serial, uložit, počkat TTL    |
+| 2 | `timeout` při ACME                        | IPv6 port 443 blokuje SmartBox     | Přidat IPv6 rule, restart routeru      |
+| 3 | ACME 400 `invalidContact you@example.com` | Výchozí e‑mail v Caddyfile         | Nastavit platný e‑mail v global { }    |
+| 4 | Web funguje po IPv6, ale ne po IPv4       | Nameservery ještě Webglobe         | Delegovat na Cloudflare (orange cloud) |
+| 5 | `communications error to 8.8.8.8#53`      | O2 blokuje externí DNS UDP 53      | Použít IPv6 resolver nebo DoH          |
+
+---
+
+## 7. Odkazy
+
+* Caddy docs: [https://caddyserver.com/docs/](https://caddyserver.com/docs/)
+* Let’s Encrypt staging: [https://letsencrypt.org/docs/staging-environment/](https://letsencrypt.org/docs/staging-environment/)
+* Cloudflare DNS resolver IPv6: `2606:4700:4700::1111`
+* Google Public DNS IPv6: `2001:4860:4860::8888`
+
+*(Aktualizováno: 17 Jun 2025)*
