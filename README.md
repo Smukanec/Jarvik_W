@@ -47,6 +47,14 @@ and `.docx` files and stores their non-empty contents in memory. PDF and DOCX
 support requires the optional packages `PyPDF2` and `python-docx` listed in
 `requirements.txt`.
 
+### Folder layout and per-user data
+
+Conversation history is stored in `memory/`. The public log lives in
+`memory/public.jsonl` while authenticated users get their own
+`memory/<nick>/log.jsonl` file. Knowledge files reside in `knowledge/` and any
+`knowledge/<nick>` subfolders listed in `users.json` are loaded for that user in
+addition to the public files.
+
 The fuzzy search threshold defaults to `0.6`. You can tweak how loosely queries
 match the knowledge base by setting the `RAG_THRESHOLD` environment variable to a
 floating point value.
@@ -310,6 +318,16 @@ Jarvik exposes a few HTTP endpoints on the configured Flask port
 * `GET /model` – return the currently running model name.
 
 * `POST /model` – switch models by posting `{ "model": "name" }`.
+
+## Authentication
+
+When a `users.json` file exists in the repository root the server requires
+credentials. The file contains objects with `nick`, `password_hash` and optional
+`knowledge_folders` or `memory_folders` entries. Obtain a login token by
+posting `{ "nick": "name", "password": "secret" }` to `/login`. Use the returned
+token in the `Authorization: Bearer <token>` header (or `X-Token`) for all other
+requests. Basic authentication with a `nick:password` pair also works. If the
+`users.json` file is missing authentication is disabled.
 
 ## Running Tests
 

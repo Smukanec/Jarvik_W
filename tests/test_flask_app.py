@@ -1,6 +1,7 @@
 import os
 import sys
 import importlib
+import base64
 import pytest
 
 pytest.importorskip("flask")
@@ -41,6 +42,18 @@ def client(monkeypatch, tmp_path):
     main.knowledge = DummyKB()
     main.user_knowledge = {}
 
+    # Enable authentication with a dummy user
+    import auth
+    user = auth.User(
+        nick="bob",
+        password_hash=auth.hash_password("pw"),
+        knowledge_folders=["private"],
+        memory_folders=["shared"],
+    )
+    main.users = {"bob": user}
+    main.AUTH_ENABLED = True
+    main.TOKENS = {}
+
     # Isolate memory handling
     monkeypatch.setattr(main, "MEMORY_DIR", str(tmp_path))
     main.memory_caches = {
@@ -50,6 +63,9 @@ def client(monkeypatch, tmp_path):
         ]
     }
     main.memory_locks = {}
+    main.memory_caches["shared"] = [
+        {"user": "shared question", "jarvik": "shared answer"}
+    ]
 
     def dummy_append(user_msg, ai_response, folder=main.DEFAULT_MEMORY_FOLDER):
         cache = main.memory_caches.setdefault(folder, [])
@@ -67,28 +83,57 @@ def client(monkeypatch, tmp_path):
     return main.app.test_client()
 
 
+def _auth():
+    cred = base64.b64encode(b"bob:pw").decode()
+    return {"Authorization": f"Basic {cred}"}
+
+
 def test_ask_endpoint(client):
-    res = client.post("/ask", json={"message": "hi"})
+    res = client.post("/ask", json={"message": "hi"}, headers=_auth())
     data = res.get_json()
     assert res.status_code == 200
     assert data["response"] == "dummy"
 
 
 def test_memory_search(client):
-    res = client.get("/memory/search")
+    res = client.get("/memory/search", headers=_auth())
     assert res.status_code == 200
     assert len(res.get_json()) == 2
 
-    res = client.get("/memory/search", query_string={"q": "foo"})
+    res = client.get("/memory/search", query_string={"q": "foo"}, headers=_auth())
     assert res.status_code == 200
     assert res.get_json()[0]["user"] == "foo"
 
 
 def test_knowledge_search(client):
-    res = client.get("/knowledge/search", query_string={"q": "test"})
+    res = client.get("/knowledge/search", query_string={"q": "test"}, headers=_auth())
     assert res.status_code == 200
     assert res.get_json() == ["kb:test"]
 
-    res = client.get("/knowledge/search")
+    res = client.get("/knowledge/search", headers=_auth())
     assert res.status_code == 200
     assert res.get_json() == []
+
+
+def test_login_and_token(client):
+    import main
+    res = client.post("/login", json={"nick": "bob", "password": "pw"})
+    assert res.status_code == 200
+    token = res.get_json()["token"]
+    assert main.TOKENS[token] == "bob"
+
+
+def test_per_user_memory(client):
+    import main
+    client.post("/ask", json={"message": "hi"}, headers=_auth())
+    assert "bob" in main.memory_caches
+    assert main.memory_caches["bob"][-1]["user"] == "hi"
+
+
+def test_per_user_knowledge_folders(client):
+    import main
+    client.get("/knowledge/search", query_string={"q": "hello"}, headers=_auth())
+    kb = main.user_knowledge["bob"]
+    assert main.PUBLIC_KNOWLEDGE_FOLDER in kb.folder[0]
+    assert os.path.join(main.PUBLIC_KNOWLEDGE_FOLDER, "private") in kb.folder[1]
+
