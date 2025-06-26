@@ -103,3 +103,14 @@ def test_search_knowledge_czech_punctuation():
     ]
     result = search_knowledge("n\u011bco o ipv6?", chunks)
     assert result == ["N\u011bco o IPv6 protokolu."]
+
+
+def test_knowledge_base_env_threshold(monkeypatch, knowledge_dir):
+    kb = KnowledgeBase(str(knowledge_dir))
+    # Without the environment variable there should be no match
+    monkeypatch.delenv("RAG_THRESHOLD", raising=False)
+    assert kb.search("nonsense") == []
+
+    # A very low threshold returns results based on similarity ratio
+    monkeypatch.setenv("RAG_THRESHOLD", "0.2")
+    assert kb.search("nonsense") != []

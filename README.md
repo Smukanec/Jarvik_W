@@ -47,6 +47,10 @@ and `.docx` files and stores their non-empty contents in memory. PDF and DOCX
 support requires the optional packages `PyPDF2` and `python-docx` listed in
 `requirements.txt`.
 
+The fuzzy search threshold defaults to `0.6`. You can tweak how loosely queries
+match the knowledge base by setting the `RAG_THRESHOLD` environment variable to a
+floating point value.
+
 ### Text-only mode
 
 If you only work with plain text files you can simplify Jarvik:
@@ -299,7 +303,9 @@ Jarvik exposes a few HTTP endpoints on the configured Flask port
   record to the memory log.
 * `GET /memory/search?q=term` – search stored memory entries. When no query is
   provided, the last five entries are returned.
-* `GET /knowledge/search?q=term` – search the local knowledge base files.
+* `GET /knowledge/search?q=term[&threshold=0.5]` – search the local knowledge
+  base files. When ``threshold`` is omitted the server falls back to the value
+  of ``RAG_THRESHOLD`` or ``0.6``.
 * `POST /knowledge/reload` – reload the knowledge base and return the number of loaded chunks. This uses the `KnowledgeBase` class to re-read the `knowledge/` directory.
 * `GET /model` – return the currently running model name.
 

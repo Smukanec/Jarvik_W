@@ -99,7 +99,20 @@ class KnowledgeBase:
         """(Re)load all supported files from :attr:`folder`."""
         self.chunks = _load_folder(self.folder)
 
-    def search(self, query: str, threshold: float = 0.6) -> list[str]:
-        """Search loaded chunks for *query* using :func:`search_knowledge`."""
+    def search(self, query: str, threshold: float | None = None) -> list[str]:
+        """Search loaded chunks for *query* using :func:`search_knowledge`.
+
+        When ``threshold`` is ``None`` the value is read from the
+        ``RAG_THRESHOLD`` environment variable. If that variable is missing or
+        invalid the default ``0.6`` is used.
+        """
+
+        if threshold is None:
+            env = os.getenv("RAG_THRESHOLD")
+            try:
+                threshold = float(env) if env is not None else 0.6
+            except ValueError:  # pragma: no cover - environment may be invalid
+                threshold = 0.6
+
         return search_knowledge(query, self.chunks, threshold)
 
