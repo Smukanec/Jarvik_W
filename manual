@@ -1,0 +1,203 @@
+# Jarvik – Manuál k instalaci a použití
+
+Tento krátký manuál popisuje základní kroky pro instalaci a spuštění Jarvika na lokálním stroji.
+
+Ve výchozím nastavení je použit model `gemma:2b` z Ollamy. Model lze kdykoli změnit ve webovém rozhraní nebo voláním endpointu `/model`. V příkladech je předpokládána Gemma 2B, jiný model zvolíte nastavením proměnné `MODEL_NAME` při spouštění skriptů.
+Flask API naslouchá na portu `8010`, který lze změnit proměnnou `FLASK_PORT`.
+Pro vzdálenou Ollamu nastavte proměnnou `OLLAMA_URL` (výchozí
+`http://localhost:11434`).
+
+## Instalace
+
+1. Spusťte instalační skript, který vytvoří virtuální prostředí a nainstaluje závislosti:
+   ```bash
+   bash install_jarvik.sh
+   ```
+   Pro čistou instalaci můžete použít přepínač `--clean`, který nejprve odstraní případné starší soubory:
+   ```bash
+   bash install_jarvik.sh --clean
+   ```
+
+2. Po dokončení instalace načtěte aliasy usnadňující práci se skripty:
+   ```bash
+   bash load.sh
+   ```
+    Do souboru `~/.bashrc` se přidají příkazy jako `jarvik-start`, `jarvik-status`,
+    `jarvik-model`, `jarvik-flask`, `jarvik-ollama` a `jarvik-start-7b`.
+
+## Spuštění
+
+Jarvika spustíte buď přímo pomocí skriptu `start_jarvik.sh`, nebo přes alias `jarvik-start` (pokud jste provedli krok s načtením aliasů):
+```bash
+bash start_gemma_2b.sh
+# nebo
+jarvik-start
+```
+Skript aktivuje virtuální prostředí, spustí Ollamu, zvolený model (výchozí
+Gemma 2B) a nakonec Flask server na portu 8010 (lze změnit proměnnou
+`FLASK_PORT`). Pokud model chybí, stáhne se automaticky. Pro jiný model
+nastavte proměnnou `MODEL_NAME` při spuštění – všechny dodané skripty ji nyní
+plně respektují. Například:
+
+```bash
+MODEL_NAME="mistral:7b-Q4_K_M" bash start_jarvik.sh
+```
+nebo použijte připravený skript pro Mistral 7B:
+
+```bash
+bash start_mistral_7b.sh
+# nebo
+jarvik-start-7b
+# (k dispozici po spuštění `bash load.sh`)
+```
+
+Podobné skripty jsou připraveny i pro další modely:
+
+```bash
+bash start_jarvik_q4.sh      # jarvik-q4
+bash start_llama3_8b.sh      # llama3:8b
+bash start_command_r.sh      # command-r
+bash start_deepseek_coder.sh # deepseek-coder
+bash start_nous_hermes2.sh   # nous-hermes2
+bash start_phi3_mini.sh      # phi3:mini
+bash start_zephyr.sh         # zephyr
+```
+Každý z těchto skriptů volá `switch_model.sh`,
+který nejprve zastaví běžící model i Flask a poté
+spustí novou instanci s vybraným modelem. Přepnutí je tak otázkou
+jednoho příkazu.
+Stejnou hodnotu používá i samotná Flask aplikace.
+
+## Podporované modely
+
+Modely lze stáhnout předem příkazem `ollama pull`:
+
+```bash
+ollama pull gemma:2b
+ollama pull mistral:7b-Q4_K_M
+ollama pull jarvik-q4
+ollama pull llama3:8b
+ollama pull command-r
+ollama pull deepseek-coder
+ollama pull nous-hermes2
+ollama pull phi3:mini
+ollama pull zephyr
+```
+
+### Přepnutí modelu za běhu
+
+Jarvika lze přepnout na jiný model bez ručního zastavení všech služeb.
+Stačí spustit skript `switch_model.sh` s názvem požadovaného modelu nebo
+vybrat nový model v rozhraní aplikace. Interně se volá endpoint `/model`.
+
+```bash
+bash switch_model.sh mistral:7b-Q4_K_M
+```
+
+Případně je možné odeslat HTTP POST požadavek na `/model` s JSON
+`{"model": "jméno"}`. Aplikace se restartuje s novým modelem. Dotazem `GET`
+na stejnou adresu zjistíte aktuálně spuštěný model.
+
+### Offline použití
+
+Pokud nemáte k dispozici internetové připojení, stáhněte si nejprve soubor s
+modelem, například skriptem `stahni-mistral-q4.sh`. Vytvořte `Modelfile` s řádkem
+`FROM /cesta/k/mistral.q4_K_M.gguf` a zaregistrujte model příkazem:
+
+```bash
+ollama create mistral:7b-Q4_K_M -f Modelfile
+```
+
+Nastavíte-li proměnnou `LOCAL_MODEL_FILE` na cestu k tomuto souboru, startovací
+skripty registraci provedou automaticky.
+
+### Spuštění pouze Ollamy
+
+Pokud potřebujete spustit jen službu Ollama bez načtení modelu, použijte:
+
+```bash
+bash start_ollama.sh
+```
+
+Po načtení aliasů stačí příkaz:
+
+```bash
+jarvik-ollama
+```
+
+### Spuštění pouze modelu
+
+Pokud potřebujete jen běžící model bez Flasku, spusťte:
+
+```bash
+bash start_model.sh
+```
+
+Po načtení aliasů stačí příkaz:
+
+```bash
+jarvik-model
+```
+
+### Spuštění pouze Flasku
+
+Pokud už máte spuštěný model a potřebujete jen Flask server, spusťte nový
+skript nebo příkaz ručně:
+
+```bash
+bash start_flask.sh
+# nebo ručně
+source venv/bin/activate && python main.py
+```
+
+Po načtení aliasů stačí příkaz:
+
+```bash
+jarvik-flask
+```
+
+## Stav běžících služeb
+
+Aktuální stav zjistíte skriptem `status.sh` nebo aliasem `jarvik-status`:
+```bash
+bash status.sh
+# nebo
+jarvik-status
+```
+Zobrazí se informace o běžících procesech a dostupnosti znalostních souborů.
+
+Pro kontrolu více modelů najednou je lze uvést jako argumenty nebo nastavit
+proměnnou `MODEL_NAMES`:
+
+```bash
+MODEL_NAMES="mistral jarvik-q4" bash status.sh
+```
+
+## Ukončení a odinstalování
+
+Pro zastavení všech služeb a odstranění prostředí použijte:
+```bash
+bash uninstall_jarvik.sh
+```
+Skript ukončí Ollamu, spuštěný model i Flask, smaže adresáře `venv/` a `memory/` a vyčistí aliasy z `~/.bashrc`.
+
+Pokud potřebujete Jarvika jen restartovat s jiným modelem, použijte
+
+```bash
+bash switch_model.sh mistral:7b-Q4_K_M
+```
+
+## Rychlý start
+
+Pro jednorázové spuštění všech komponent slouží skript `start_jarvik.sh`, který aktivuje prostředí, spustí model i server v jednom kroku:
+```bash
+bash start_jarvik.sh
+```
+
+## Upgrade
+
+Nejnovější verzi můžete stáhnout a nainstalovat skriptem `upgrade.sh`:
+```bash
+bash upgrade.sh
+```
+Skript stáhne nové soubory z repozitáře, provede odinstalování, znovu nainstaluje závislosti, obnoví aliasy v `~/.bashrc` a spustí Jarvika.

@@ -1,0 +1,39 @@
+Traceback (most recent call last):
+  File "C:\Users\jiric\OneDrive\Jarvik_code\main.py", line 36, in <module>
+    knowledge = KnowledgeBase(os.path.join(BASE_DIR, "knowledge"))
+  File "C:\Users\jiric\OneDrive\Jarvik_code\rag_engine.py", line 96, in __init__
+    self.reload()
+    ~~~~~~~~~~~^^
+  File "C:\Users\jiric\OneDrive\Jarvik_code\rag_engine.py", line 100, in reload
+    self.chunks = _load_folder(self.folder)
+                  ~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\jiric\OneDrive\Jarvik_code\rag_engine.py", line 50, in _load_folder
+    content = load_pdf_file(path)
+  File "C:\Users\jiric\OneDrive\Jarvik_code\rag_engine.py", line 29, in load_pdf_file
+    text += page.extract_text() or ""
+            ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\jiric\OneDrive\Jarvik_code\venv\Lib\site-packages\PyPDF2\_page.py", line 1851, in extract_text
+    return self._extract_text(
+           ~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<6 lines>...
+        visitor_text,
+        ^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\jiric\OneDrive\Jarvik_code\venv\Lib\site-packages\PyPDF2\_page.py", line 1356, in _extract_text
+    content = ContentStream(content, pdf, "bytes")
+  File "C:\Users\jiric\OneDrive\Jarvik_code\venv\Lib\site-packages\PyPDF2\generic\_data_structures.py", line 877, in __init__
+    self.__parse_content_stream(stream_bytes)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\jiric\OneDrive\Jarvik_code\venv\Lib\site-packages\PyPDF2\generic\_data_structures.py", line 943, in __parse_content_stream
+    operands.append(read_object(stream, None, self.forced_encoding))
+                    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jiric\OneDrive\Jarvik_code\venv\Lib\site-packages\PyPDF2\generic\_data_structures.py", line 1049, in read_object
+    return ArrayObject.read_from_stream(stream, pdf, forced_encoding)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jiric\OneDrive\Jarvik_code\venv\Lib\site-packages\PyPDF2\generic\_data_structures.py", line 148, in read_from_stream
+    stream.seek(-1, 1)
+    ~~~~~~~~~~~^^^^^^^
+KeyboardInterrupt
