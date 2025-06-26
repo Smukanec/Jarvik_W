@@ -41,19 +41,21 @@ def client(monkeypatch, tmp_path):
     main.knowledge = DummyKB()
 
     # Isolate memory handling
-    mem = tmp_path / "mem.jsonl"
-    monkeypatch.setattr(main, "memory_path", str(mem))
-    monkeypatch.setattr(main, "memory_lock", main.FileLock(str(mem) + ".lock"))
-    main.memory_cache = [
-        {"user": "hello", "jarvik": "there"},
-        {"user": "foo", "jarvik": "bar"},
-    ]
+    monkeypatch.setattr(main, "MEMORY_DIR", str(tmp_path))
+    main.memory_caches = {
+        main.DEFAULT_MEMORY_FOLDER: [
+            {"user": "hello", "jarvik": "there"},
+            {"user": "foo", "jarvik": "bar"},
+        ]
+    }
+    main.memory_locks = {}
 
-    def dummy_append(user_msg, ai_response):
-        main.memory_cache.append({"user": user_msg, "jarvik": ai_response})
+    def dummy_append(user_msg, ai_response, folder=main.DEFAULT_MEMORY_FOLDER):
+        cache = main.memory_caches.setdefault(folder, [])
+        cache.append({"user": user_msg, "jarvik": ai_response})
 
     monkeypatch.setattr(main, "append_to_memory", dummy_append)
-    monkeypatch.setattr(main, "_flush_memory_locked", lambda: None)
+    monkeypatch.setattr(main, "_flush_memory_locked", lambda folder: None)
 
     # Stub network call to Ollama
     import requests
