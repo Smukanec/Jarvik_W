@@ -325,6 +325,28 @@ When a `users.json` file exists in the repository root the server requires
 credentials. The file contains objects with `nick`, `password_hash` and optional
 `knowledge_folders` or `memory_folders` entries.
 
+A minimal configuration might look like:
+
+```json
+[
+  {
+    "nick": "bob",
+    "password_hash": "<output of auth.hash_password('pw')>",
+    "knowledge_folders": ["private"],
+    "memory_folders": ["shared"]
+  }
+]
+```
+
+Generate the `password_hash` value with:
+
+```bash
+python -c "import auth; print(auth.hash_password('your_password'))"
+```
+
+The repository also includes a `users.example.json` file containing the same
+sample for quick reference.
+
 The web interface now starts with a login form. Enter your nick and password to
 obtain a token from the `/login` endpoint. The token is stored in
 `localStorage` and every request automatically includes an

@@ -1,0 +1,8 @@
+[
+  {
+    "nick": "bob",
+    "password_hash": "<output of auth.hash_password('pw')>",
+    "knowledge_folders": ["private"],
+    "memory_folders": ["shared"]
+  }
+]
