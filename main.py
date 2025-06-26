@@ -18,6 +18,13 @@ FLASK_PORT = int(os.getenv("FLASK_PORT", 8010))
 # Base URL for the Ollama server
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
+# Threshold for knowledge base search
+threshold_env = os.getenv("RAG_THRESHOLD")
+try:
+    RAG_THRESHOLD = float(threshold_env) if threshold_env is not None else None
+except ValueError:
+    RAG_THRESHOLD = None
+
 # Set base directory relative to this file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 memory_path = os.path.join(BASE_DIR, "memory", "public.jsonl")
@@ -105,7 +112,7 @@ def ask():
     memory_context = load_memory()
     debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
 
-    rag_context = knowledge.search(message)
+    rag_context = knowledge.search(message, threshold=RAG_THRESHOLD)
     debug_log.append(f"📚 Kontext z RAG: {len(rag_context)} výsledků")
 
     # Vytvoření promptu pro model
@@ -162,7 +169,7 @@ def ask_file():
     memory_context = load_memory()
     debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
 
-    rag_context = knowledge.search(message)
+    rag_context = knowledge.search(message, threshold=RAG_THRESHOLD)
     if file_text:
         rag_context = [file_text] + rag_context
     debug_log.append(f"📚 Kontext z RAG: {len(rag_context)} výsledků")
@@ -255,9 +262,14 @@ def memory_search():
 @app.route("/knowledge/search")
 def knowledge_search():
     query = request.args.get("q", "")
+    thresh_param = request.args.get("threshold") or request.args.get("t")
+    try:
+        thresh = float(thresh_param) if thresh_param is not None else RAG_THRESHOLD
+    except ValueError:
+        thresh = RAG_THRESHOLD
     if not query:
         return jsonify([])
-    return jsonify(knowledge.search(query))
+    return jsonify(knowledge.search(query, threshold=thresh))
 
 
 @app.route("/knowledge/reload", methods=["POST"])
