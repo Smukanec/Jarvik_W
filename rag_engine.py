@@ -3,6 +3,30 @@ import glob
 import re
 from difflib import SequenceMatcher
 
+# Flags indicating whether optional dependencies are available
+PDF_SUPPORT = False
+DOCX_SUPPORT = False
+
+
+def _check_optional_dependencies() -> None:
+    """Set :data:`PDF_SUPPORT` and :data:`DOCX_SUPPORT` globals."""
+    global PDF_SUPPORT, DOCX_SUPPORT
+    try:  # pragma: no cover - availability is system dependent
+        import PyPDF2  # noqa: F401
+
+        PDF_SUPPORT = True
+    except Exception:
+        PDF_SUPPORT = False
+    try:  # pragma: no cover - availability is system dependent
+        import docx  # noqa: F401
+
+        DOCX_SUPPORT = True
+    except Exception:
+        DOCX_SUPPORT = False
+
+
+_check_optional_dependencies()
+
 __all__ = [
     "load_txt_file",
     "load_pdf_file",
@@ -10,6 +34,7 @@ __all__ = [
     "load_knowledge",
     "search_knowledge",
     "KnowledgeBase",
+    "dependency_status",
 ]
 
 def load_txt_file(path):
@@ -41,7 +66,19 @@ def load_docx_file(path):
 def _load_folder(folder: str) -> list[str]:
     """Return a list of non-empty knowledge chunks from *folder*."""
     chunks: list[str] = []
+    warned_pdf = False
+    warned_docx = False
     for ext in ("*.txt", "*.pdf", "*.docx"):
+        if ext == "*.pdf" and not PDF_SUPPORT:
+            if not warned_pdf:
+                print("⚠️  PDF support disabled – install PyPDF2 to enable")
+                warned_pdf = True
+            continue
+        if ext == "*.docx" and not DOCX_SUPPORT:
+            if not warned_docx:
+                print("⚠️  DOCX support disabled – install python-docx to enable")
+                warned_docx = True
+            continue
         for path in glob.glob(os.path.join(folder, ext)):
             try:
                 if ext == "*.txt":
@@ -115,4 +152,10 @@ class KnowledgeBase:
                 threshold = 0.6
 
         return search_knowledge(query, self.chunks, threshold)
+
+
+def dependency_status() -> dict[str, bool]:
+    """Return which optional dependencies are available."""
+
+    return {"pdf": PDF_SUPPORT, "docx": DOCX_SUPPORT}
 

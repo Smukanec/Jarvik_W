@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_file, after_this_request
 from rag_engine import (
     KnowledgeBase,
+    dependency_status,
     load_txt_file,
     load_pdf_file,
     load_docx_file,
@@ -45,6 +46,11 @@ app = Flask(__name__)
 # Načti znalosti při startu
 knowledge = KnowledgeBase(os.path.join(BASE_DIR, "knowledge"))
 print("✅ Znalosti načteny.")
+deps = dependency_status()
+if not deps["pdf"]:
+    print("⚠️  PDF soubory se nenačtou – nainstalujte balíček PyPDF2")
+if not deps["docx"]:
+    print("⚠️  DOCX soubory se nenačtou – nainstalujte balíček python-docx")
 
 def _read_memory_file():
     """Return memory entries loaded from disk respecting the limit."""
@@ -278,6 +284,11 @@ def knowledge_reload():
     knowledge.reload()
     reload_memory()
     print("✅ Znalosti načteny.")
+    deps = dependency_status()
+    if not deps["pdf"]:
+        print("⚠️  PDF soubory se nenačtou – nainstalujte balíček PyPDF2")
+    if not deps["docx"]:
+        print("⚠️  DOCX soubory se nenačtou – nainstalujte balíček python-docx")
     return jsonify({"status": "reloaded", "chunks": len(knowledge.chunks)})
 
 
