@@ -24,7 +24,14 @@ check_model() {
 check_flask() {
   if ! netstat -an | grep -q ":$FLASK_PORT"; then
     echo -e "${RED}❌ Flask neběží. Restartuji...${NC}"
-    source venv/Scripts/activate
+    if [ -f venv/bin/activate ]; then
+      source venv/bin/activate
+    elif [ -f venv/Scripts/activate ]; then
+      source venv/Scripts/activate
+    else
+      echo -e "${RED}❌ Chybí virtuální prostředí venv/.${NC}"
+      return
+    fi
     nohup python main.py > flask.log 2>&1 &
   fi
 }

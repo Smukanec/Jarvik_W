@@ -28,7 +28,14 @@ fi
 
 # Aktivace venv a instalace požadavků
 echo "📦 Instalace Python závislostí..."
-source venv/Scripts/activate
+if [ -f venv/bin/activate ]; then
+  source venv/bin/activate
+elif [ -f venv/Scripts/activate ]; then
+  source venv/Scripts/activate
+else
+  echo "❌ Chybí virtuální prostředí venv/. Spusťte skript znovu." >&2
+  exit 1
+fi
 
 if ! pip install -r requirements.txt; then
   echo -e "\033[1;33m⚠️  Instalace Python závislostí selhala. Zkontrolujte připojení k internetu.\033[0m"
