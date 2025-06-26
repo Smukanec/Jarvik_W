@@ -20,6 +20,23 @@ if [ ! -f memory/public.jsonl ]; then
   touch memory/public.jsonl
 fi
 
+# Create personal memory logs for users defined in users.json
+if [ -f users.json ]; then
+  echo "📄 Vytvářím osobní paměti pro uživatele..."
+  python - <<'PY'
+import json, os
+with open('users.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+for u in data:
+    nick = u.get('nick')
+    if not nick:
+        continue
+    path = os.path.join('memory', nick)
+    os.makedirs(path, exist_ok=True)
+    open(os.path.join(path, 'log.jsonl'), 'a', encoding='utf-8').close()
+PY
+fi
+
 # Vytvoření virtuálního prostředí (pokud není)
 if [ ! -d venv ]; then
   echo "🧪 Vytvářím virtuální prostředí venv/..."

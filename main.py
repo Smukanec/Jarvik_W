@@ -10,6 +10,11 @@ from rag_engine import (
 from auth import load_users, User
 import base64
 import secrets
+import json
+import os
+import tempfile
+import subprocess
+from filelock import FileLock
 
 
 class MultiKnowledgeBase:
@@ -42,11 +47,6 @@ class MultiKnowledgeBase:
         for kb in self.bases.values():
             if kb:
                 kb.reload()
-import json
-import os
-import tempfile
-import subprocess
-from filelock import FileLock
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
@@ -145,12 +145,25 @@ if not deps["docx"]:
 
 
 def _ensure_memory(folder: str) -> tuple[str, FileLock]:
-    path = os.path.join(MEMORY_DIR, f"{folder}.jsonl")
-    if folder not in memory_locks:
-        os.makedirs(MEMORY_DIR, exist_ok=True)
+    """Return the memory log path and lock for *folder*.
+
+    The ``public`` folder maps to ``memory/public.jsonl`` while any other
+    name creates ``memory/<name>/log.jsonl``. This supports per-user logs
+    without breaking the existing public memory file.
+    """
+
+    if folder == DEFAULT_MEMORY_FOLDER:
+        path = os.path.join(MEMORY_DIR, "public.jsonl")
+        lock_key = DEFAULT_MEMORY_FOLDER
+    else:
+        path = os.path.join(MEMORY_DIR, folder, "log.jsonl")
+        lock_key = folder
+
+    if lock_key not in memory_locks:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         open(path, "a", encoding="utf-8").close()
-        memory_locks[folder] = FileLock(f"{path}.lock")
-    return path, memory_locks[folder]
+        memory_locks[lock_key] = FileLock(f"{path}.lock")
+    return path, memory_locks[lock_key]
 
 
 def _read_memory_file(folder: str) -> list[dict]:
@@ -245,7 +258,8 @@ def ask():
     message = (data or {}).get("message", "")
 
     user: User | None = getattr(g, "current_user", None)
-    memory_context = load_memory(user.memory_folders if user else None)
+    folders = [user.nick] + user.memory_folders if user else None
+    memory_context = load_memory(folders)
     debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
 
     rag_context = knowledge.search(message, folders=user.knowledge_folders if user else None, threshold=RAG_THRESHOLD)
@@ -271,7 +285,7 @@ def ask():
         debug_log.append(str(e))
         return jsonify({"error": "❌ Chyba při komunikaci s Ollamou", "debug": debug_log}), 500
 
-    target_folder = user.memory_folders[0] if user and user.memory_folders else DEFAULT_MEMORY_FOLDER
+    target_folder = user.nick if user else DEFAULT_MEMORY_FOLDER
     append_to_memory(message, output, folder=target_folder)
 
 
@@ -305,7 +319,8 @@ def ask_file():
             os.unlink(tmp_path)
 
     user: User | None = getattr(g, "current_user", None)
-    memory_context = load_memory(user.memory_folders if user else None)
+    folders = [user.nick] + user.memory_folders if user else None
+    memory_context = load_memory(folders)
     debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
 
     rag_context = knowledge.search(message, folders=user.knowledge_folders if user else None, threshold=RAG_THRESHOLD)
@@ -337,7 +352,7 @@ def ask_file():
             500,
         )
 
-    target_folder = user.memory_folders[0] if user and user.memory_folders else DEFAULT_MEMORY_FOLDER
+    target_folder = user.nick if user else DEFAULT_MEMORY_FOLDER
     append_to_memory(message, output, folder=target_folder)
 
     if ext in {".txt", ".pdf", ".docx"}:
@@ -390,7 +405,7 @@ def memory_add():
     if not user_msg or not jarvik_msg:
         return jsonify({"error": "user and jarvik required"}), 400
     user: User | None = getattr(g, "current_user", None)
-    folder = user.memory_folders[0] if user and user.memory_folders else DEFAULT_MEMORY_FOLDER
+    folder = user.nick if user else DEFAULT_MEMORY_FOLDER
     append_to_memory(user_msg, jarvik_msg, folder=folder)
     return jsonify({"status": "ok"})
 
@@ -399,7 +414,8 @@ def memory_add():
 def memory_search():
     query = request.args.get("q", "")
     user: User | None = getattr(g, "current_user", None)
-    memory_entries = load_memory(user.memory_folders if user else None)
+    folders = [user.nick] + user.memory_folders if user else None
+    memory_entries = load_memory(folders)
     if not query:
         return jsonify(memory_entries[-5:])
     return jsonify(search_memory(query, memory_entries))
@@ -431,7 +447,8 @@ def knowledge_reload():
     """Reload knowledge base files and return how many chunks were loaded."""
     knowledge.reload()
     user: User | None = getattr(g, "current_user", None)
-    reload_memory(user.memory_folders if user else None)
+    folders = [user.nick] + user.memory_folders if user else None
+    reload_memory(folders)
     print("✅ Znalosti načteny.")
     deps = dependency_status()
     if not deps["pdf"]:
