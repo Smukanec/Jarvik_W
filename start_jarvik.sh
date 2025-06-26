@@ -19,6 +19,9 @@ if [ -z "$VIRTUAL_ENV" ]; then
   if [ -f venv/bin/activate ]; then
     source venv/bin/activate
     echo -e "${GREEN}✅ Aktivováno virtuální prostředí${NC}"
+  elif [ -f venv/Scripts/activate ]; then
+    source venv/Scripts/activate
+    echo -e "${GREEN}✅ Aktivováno virtuální prostředí${NC}"
   else
     echo -e "${RED}❌ Chybí virtuální prostředí venv/. Spusťte install_jarvik.sh.${NC}"
     exit 1
