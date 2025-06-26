@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Jarvik</title>
+  <style>
+    body {
+      font-family: monospace;
+      background-color: #121212;
+      margin: 2em;
+      color: #c8f6c8;
+    }
+    img {
+      max-height: 100px;
+      margin-bottom: 1em;
+    }
+    textarea {
+      width: 100%;
+      padding: 1em;
+      font-size: 1em;
+      border: 2px solid #00ff00;
+      border-radius: 8px;
+      background-color: #1e1e1e;
+      color: #c8f6c8;
+    }
+    button {
+      background-color: #00aa00;
+      color: white;
+      border: none;
+      padding: 0.8em 1.5em;
+      font-size: 1em;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 0.5em;
+    }
+    button:hover {
+      background-color: #007700;
+    }
+    pre {
+      background-color: #1e1e1e;
+      border: 1px solid #2e7d32;
+      padding: 1em;
+      border-radius: 8px;
+      margin-top: 1em;
+      color: #c8f6c8;
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: bold;
+      color: #00ff00;
+      margin-top: 1em;
+    }
+    #log, #status, #debug, #activity {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    #current-model-display {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-bottom: 0.5em;
+    }
+  </style>
+</head>
+<body>
+  <img src="/static/alternativ.png" alt="Jarvik logo">
+
+  <h2 id="current-model-display">Running model: <span id="current-model">?</span></h2>
+  <select id="model-select">
+    <option value="phi3:mini">Phi3 Mini</option>
+    <option value="mistral">Mistral</option>
+    <option value="nous-hermes2">Nous Hermes2</option>
+    <option value="llama3:8b">Llama3 8B</option>
+    <option value="command-r">Command R</option>
+    <option value="zephyr">Zephyr</option>
+    <option value="deepseek-coder">Deepseek Coder</option>
+    <option value="gemma:2b">Gemma 2B</option>
+    <option value="mistral:7b-Q4_K_M">Mistral 7B</option>
+    <option value="jarvik-q4">Jarvik Q4</option>
+  </select>
+  <button onclick="switchModel()">Switch model</button>
+  <pre id="model-status"></pre>
+
+  <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea><br>
+  <input type="file" id="file" accept=".txt,.pdf,.docx"><br>
+  <button onclick="ask()">Odeslat</button>
+  <pre id="activity"></pre>
+
+  <pre id="response"></pre>
+  <a id="download" style="display:none" href="#">⬇️ Stáhnout odpověď</a>
+
+  <details open>
+    <summary>🕘 Historie</summary>
+    <pre id="log"></pre>
+  </details>
+
+  <h3>🧪 Debug</h3>
+  <pre id="debug"></pre>
+
+  <h3>📊 Stav</h3>
+  <pre id="status">🟢 Připraven.</pre>
+  <pre id="duration"></pre>
+
+  <script>
+    const MODEL_NAMES = {
+      'phi3:mini': 'Phi3 Mini',
+      'mistral': 'Mistral',
+      'nous-hermes2': 'Nous Hermes2',
+      'llama3:8b': 'Llama3 8B',
+      'command-r': 'Command R',
+      'zephyr': 'Zephyr',
+      'deepseek-coder': 'Deepseek Coder',
+      'gemma:2b': 'Gemma 2B',
+      'mistral:7b-Q4_K_M': 'Mistral 7B',
+      'jarvik-q4': 'Jarvik Q4'
+    };
+
+    async function loadModel() {
+      const res = await fetch('/model');
+      const data = await res.json();
+      const name = MODEL_NAMES[data.model] || data.model;
+      document.getElementById('current-model').textContent = name;
+      const sel = document.getElementById('model-select');
+      if (sel) {
+        let option = Array.from(sel.options).find(o => o.value === data.model);
+        if (!option) {
+          option = new Option(name, data.model);
+          sel.appendChild(option);
+        }
+        sel.value = data.model;
+      }
+    }
+
+    async function switchModel() {
+      const model = document.getElementById('model-select').value;
+      document.getElementById('model-status').textContent = '⏳ Restartuji...';
+      await fetch('/model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model })
+      });
+      document.getElementById('model-status').textContent = '🔄 Restartuji, chvíli strpení...';
+      const name = MODEL_NAMES[model] || model;
+      document.getElementById('current-model').textContent = name;
+    }
+
+    loadModel();
+    const select = document.getElementById('model-select');
+    if (select) select.addEventListener('change', switchModel);
+
+    let conversationLog = "";
+
+    async function ask() {
+      const msg = document.getElementById("message").value.trim();
+      const fileInput = document.getElementById("file");
+      const file = fileInput.files[0];
+      if (!msg && !file) return;
+      document.getElementById("status").textContent = "⏳ Zpracovávám…";
+      document.getElementById("activity").textContent = "Čekám na odpověď…";
+      document.getElementById("duration").textContent = "";
+
+      // measure the time it takes to get a response
+      const startTime = performance.now();
+
+      const formData = new FormData();
+      formData.append("message", msg);
+      if (file) {
+        formData.append("file", file);
+      }
+
+      const res = await fetch("/ask_file", {
+        method: "POST",
+        body: formData
+      });
+
+      const contentType = res.headers.get("Content-Type") || "";
+      const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+      const timestamp = new Date().toLocaleTimeString();
+
+      if (contentType.includes("application/json")) {
+        const data = await res.json();
+        document.getElementById("response").textContent = data.response || "❌ Chyba odpovědi";
+        document.getElementById("debug").textContent = data.debug ? data.debug.join("\n") : "(žádný debug)";
+        conversationLog += `[${timestamp}] 👤 ${msg}\n[${timestamp}] 🤖 ${data.response}\n\n`;
+        document.getElementById("download").style.display = "none";
+      } else {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const answer = res.headers.get("X-Answer") || "";
+        const debug = res.headers.get("X-Debug");
+        const debugData = debug ? JSON.parse(debug) : [];
+        document.getElementById("response").textContent = answer || "❌ Chyba odpovědi";
+        document.getElementById("debug").textContent = debugData.length ? debugData.join("\n") : "(žádný debug)";
+        conversationLog += `[${timestamp}] 👤 ${msg}\n[${timestamp}] 🤖 ${answer}\n\n`;
+        const disposition = res.headers.get("Content-Disposition") || "";
+        let filename = "response";
+        const m = disposition.match(/filename="?([^";]+)"?/);
+        if (m) filename = m[1];
+        const link = document.getElementById("download");
+        link.href = url;
+        link.download = filename;
+        link.textContent = `⬇️ ${filename}`;
+        link.style.display = "inline";
+      }
+      document.getElementById("log").textContent = conversationLog;
+      document.getElementById("duration").textContent = `⏱ ${elapsed} s`;
+
+      document.getElementById("message").value = "";
+      fileInput.value = "";
+      document.getElementById("status").textContent = `🟢 Připraven za ${elapsed} s.`;
+      document.getElementById("activity").textContent = "";
+    }
+
+    document.getElementById("message").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        ask();
+      }
+    });
+  </script>
+</body>
+</html>
