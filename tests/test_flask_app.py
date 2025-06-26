@@ -39,6 +39,7 @@ def client(monkeypatch, tmp_path):
 
     # Replace the global knowledge instance
     main.knowledge = DummyKB()
+    main.user_knowledge = {}
 
     # Isolate memory handling
     monkeypatch.setattr(main, "MEMORY_DIR", str(tmp_path))

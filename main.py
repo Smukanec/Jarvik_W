@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify, send_file, after_this_request, g
-import rag_engine
 from rag_engine import (
     KnowledgeBase,
     dependency_status,
@@ -15,38 +14,6 @@ import os
 import tempfile
 import subprocess
 from filelock import FileLock
-
-
-class MultiKnowledgeBase:
-    """Combine knowledge from the public folder and optional subfolders."""
-
-    def __init__(self, root: str):
-        self.root = root
-        self.bases: dict[str, KnowledgeBase | None] = {"": KnowledgeBase(root)}
-
-    def _get_base(self, sub: str) -> KnowledgeBase | None:
-        kb = self.bases.get(sub)
-        if kb is None:
-            path = os.path.join(self.root, sub)
-            if os.path.isdir(path):
-                kb = KnowledgeBase(path)
-            else:
-                kb = None
-            self.bases[sub] = kb
-        return kb
-
-    def search(self, query: str, folders: list[str] | None = None, threshold: float | None = None) -> list[str]:
-        chunks = []
-        for sub in [""] + (folders or []):
-            kb = self._get_base(sub)
-            if kb:
-                chunks.extend(kb.chunks)
-        return rag_engine.search_knowledge(query, chunks, threshold or RAG_THRESHOLD)
-
-    def reload(self) -> None:
-        for kb in self.bases.values():
-            if kb:
-                kb.reload()
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
@@ -135,13 +102,28 @@ MAX_MEMORY_ENTRIES = int(limit_env) if limit_env and limit_env.isdigit() else No
 app = Flask(__name__)
 
 # Načti znalosti při startu
-knowledge = MultiKnowledgeBase(os.path.join(BASE_DIR, "knowledge"))
+PUBLIC_KNOWLEDGE_FOLDER = os.path.join(BASE_DIR, "knowledge")
+knowledge = KnowledgeBase(PUBLIC_KNOWLEDGE_FOLDER)
+user_knowledge: dict[str, KnowledgeBase] = {}
 print("✅ Znalosti načteny.")
 deps = dependency_status()
 if not deps["pdf"]:
     print("⚠️  PDF soubory se nenačtou – nainstalujte balíček PyPDF2")
 if not deps["docx"]:
     print("⚠️  DOCX soubory se nenačtou – nainstalujte balíček python-docx")
+
+
+def get_knowledge_base(user: User | None) -> KnowledgeBase:
+    if not user:
+        return knowledge
+    kb = user_knowledge.get(user.nick)
+    if kb is None:
+        folders = [PUBLIC_KNOWLEDGE_FOLDER]
+        for sub in user.knowledge_folders:
+            folders.append(os.path.join(PUBLIC_KNOWLEDGE_FOLDER, sub))
+        kb = KnowledgeBase(folders)
+        user_knowledge[user.nick] = kb
+    return kb
 
 
 def _ensure_memory(folder: str) -> tuple[str, FileLock]:
@@ -262,7 +244,8 @@ def ask():
     memory_context = load_memory(folders)
     debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
 
-    rag_context = knowledge.search(message, folders=user.knowledge_folders if user else None, threshold=RAG_THRESHOLD)
+    kb = get_knowledge_base(user)
+    rag_context = kb.search(message, threshold=RAG_THRESHOLD)
     debug_log.append(f"📚 Kontext z RAG: {len(rag_context)} výsledků")
 
     # Vytvoření promptu pro model
@@ -323,7 +306,8 @@ def ask_file():
     memory_context = load_memory(folders)
     debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
 
-    rag_context = knowledge.search(message, folders=user.knowledge_folders if user else None, threshold=RAG_THRESHOLD)
+    kb = get_knowledge_base(user)
+    rag_context = kb.search(message, threshold=RAG_THRESHOLD)
     if file_text:
         rag_context = [file_text] + rag_context
     debug_log.append(f"📚 Kontext z RAG: {len(rag_context)} výsledků")
@@ -432,21 +416,17 @@ def knowledge_search():
     if not query:
         return jsonify([])
     user: User | None = getattr(g, "current_user", None)
-    return jsonify(
-        knowledge.search(
-            query,
-            folders=user.knowledge_folders if user else None,
-            threshold=thresh,
-        )
-    )
+    kb = get_knowledge_base(user)
+    return jsonify(kb.search(query, threshold=thresh))
 
 
 @app.route("/knowledge/reload", methods=["POST"])
 @require_auth
 def knowledge_reload():
     """Reload knowledge base files and return how many chunks were loaded."""
-    knowledge.reload()
     user: User | None = getattr(g, "current_user", None)
+    kb = get_knowledge_base(user)
+    kb.reload()
     folders = [user.nick] + user.memory_folders if user else None
     reload_memory(folders)
     print("✅ Znalosti načteny.")
@@ -455,7 +435,7 @@ def knowledge_reload():
         print("⚠️  PDF soubory se nenačtou – nainstalujte balíček PyPDF2")
     if not deps["docx"]:
         print("⚠️  DOCX soubory se nenačtou – nainstalujte balíček python-docx")
-    return jsonify({"status": "reloaded", "chunks": len(knowledge.chunks)})
+    return jsonify({"status": "reloaded", "chunks": len(kb.chunks)})
 
 
 @app.route("/model", methods=["GET", "POST"])

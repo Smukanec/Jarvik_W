@@ -114,3 +114,17 @@ def test_knowledge_base_env_threshold(monkeypatch, knowledge_dir):
     # A very low threshold returns results based on similarity ratio
     monkeypatch.setenv("RAG_THRESHOLD", "0.2")
     assert kb.search("nonsense") != []
+
+
+def test_knowledge_base_multiple_folders(tmp_path):
+    folder1 = tmp_path / "kb1"
+    folder2 = tmp_path / "kb2"
+    folder1.mkdir()
+    folder2.mkdir()
+    (folder1 / "a.txt").write_text("hello", encoding="utf-8")
+    (folder2 / "b.txt").write_text("world", encoding="utf-8")
+
+    kb = KnowledgeBase([str(folder1), str(folder2)])
+
+    assert any("hello" in c for c in kb.chunks)
+    assert any("world" in c for c in kb.chunks)
