@@ -323,11 +323,15 @@ Jarvik exposes a few HTTP endpoints on the configured Flask port
 
 When a `users.json` file exists in the repository root the server requires
 credentials. The file contains objects with `nick`, `password_hash` and optional
-`knowledge_folders` or `memory_folders` entries. Obtain a login token by
-posting `{ "nick": "name", "password": "secret" }` to `/login`. Use the returned
-token in the `Authorization: Bearer <token>` header (or `X-Token`) for all other
-requests. Basic authentication with a `nick:password` pair also works. If the
-`users.json` file is missing authentication is disabled.
+`knowledge_folders` or `memory_folders` entries.
+
+The web interface now starts with a login form. Enter your nick and password to
+obtain a token from the `/login` endpoint. The token is stored in
+`localStorage` and every request automatically includes an
+`Authorization: Bearer <token>` header (the old `X-Token` header still works).
+An optional API key field is provided and saved in `localStorage` as well. If
+`users.json` is missing authentication is disabled and the interface loads
+immediately.
 
 ## Running Tests
 

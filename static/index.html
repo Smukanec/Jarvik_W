@@ -64,6 +64,15 @@
 <body>
   <img src="/static/alternativ.png" alt="Jarvik logo">
 
+  <div id="login" style="display:none">
+    <input id="nick" placeholder="nick"><br>
+    <input id="password" type="password" placeholder="password"><br>
+    <input id="apikey" placeholder="API key (optional)"><br>
+    <button onclick="doLogin()">Login</button>
+    <pre id="login-status"></pre>
+  </div>
+
+  <div id="interface" style="display:none">
   <h2 id="current-model-display">Running model: <span id="current-model">?</span></h2>
   <select id="model-select">
     <option value="phi3:mini">Phi3 Mini</option>
@@ -114,8 +123,17 @@
       'jarvik-q4': 'Jarvik Q4'
     };
 
+    let token = localStorage.getItem('token') || '';
+    let apiKey = localStorage.getItem('apiKey') || '';
+
+    function authFetch(url, options = {}) {
+      options.headers = options.headers || {};
+      if (token) options.headers['Authorization'] = 'Bearer ' + token;
+      return fetch(url, options);
+    }
+
     async function loadModel() {
-      const res = await fetch('/model');
+      const res = await authFetch('/model');
       const data = await res.json();
       const name = MODEL_NAMES[data.model] || data.model;
       document.getElementById('current-model').textContent = name;
@@ -133,7 +151,7 @@
     async function switchModel() {
       const model = document.getElementById('model-select').value;
       document.getElementById('model-status').textContent = '⏳ Restartuji...';
-      await fetch('/model', {
+      await authFetch('/model', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model })
@@ -143,9 +161,49 @@
       document.getElementById('current-model').textContent = name;
     }
 
-    loadModel();
-    const select = document.getElementById('model-select');
-    if (select) select.addEventListener('change', switchModel);
+    function showInterface() {
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('interface').style.display = 'block';
+      loadModel();
+      const select = document.getElementById('model-select');
+      if (select) select.addEventListener('change', switchModel);
+    }
+
+    async function checkAuth() {
+      if (!token) {
+        document.getElementById('login').style.display = 'block';
+        return;
+      }
+      const res = await authFetch('/model');
+      if (res.status === 401) {
+        document.getElementById('login').style.display = 'block';
+        token = '';
+        localStorage.removeItem('token');
+      } else {
+        showInterface();
+      }
+    }
+
+    async function doLogin() {
+      const nick = document.getElementById('nick').value.trim();
+      const password = document.getElementById('password').value;
+      apiKey = document.getElementById('apikey').value.trim();
+      if (apiKey) localStorage.setItem('apiKey', apiKey);
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nick, password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        token = data.token;
+        localStorage.setItem('token', token);
+        document.getElementById('login-status').textContent = '';
+        showInterface();
+      } else {
+        document.getElementById('login-status').textContent = 'Login failed';
+      }
+    }
 
     let conversationLog = "";
 
@@ -167,7 +225,7 @@
         formData.append("file", file);
       }
 
-      const res = await fetch("/ask_file", {
+      const res = await authFetch("/ask_file", {
         method: "POST",
         body: formData
       });
@@ -216,6 +274,8 @@
         ask();
       }
     });
+    checkAuth();
   </script>
+  </div>
 </body>
 </html>
