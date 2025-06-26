@@ -125,16 +125,22 @@ def search_knowledge(query, knowledge_chunks, threshold=0.6):
 
 
 class KnowledgeBase:
-    """Manage loading and searching local knowledge files."""
+    """Manage loading and searching local knowledge files from one or more folders."""
 
-    def __init__(self, folder: str):
-        self.folder = folder
+    def __init__(self, folder: str | list[str]):
+        if isinstance(folder, str):
+            self.folders = [folder]
+        else:
+            self.folders = list(folder)
         self.chunks: list[str] = []
         self.reload()
 
     def reload(self) -> None:
-        """(Re)load all supported files from :attr:`folder`."""
-        self.chunks = _load_folder(self.folder)
+        """(Re)load all supported files from :attr:`folders`."""
+        chunks: list[str] = []
+        for folder in self.folders:
+            chunks.extend(_load_folder(folder))
+        self.chunks = chunks
 
     def search(self, query: str, threshold: float | None = None) -> list[str]:
         """Search loaded chunks for *query* using :func:`search_knowledge`.
