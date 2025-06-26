@@ -9,6 +9,7 @@ import json
 import os
 import tempfile
 import subprocess
+from filelock import FileLock
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
@@ -20,6 +21,8 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 # Set base directory relative to this file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 memory_path = os.path.join(BASE_DIR, "memory", "public.jsonl")
+# Lock file to coordinate memory writes across processes
+memory_lock = FileLock(f"{memory_path}.lock")
 # Ensure memory directory and file exist
 os.makedirs(os.path.dirname(memory_path), exist_ok=True)
 open(memory_path, "a", encoding="utf-8").close()
@@ -63,14 +66,22 @@ def append_to_memory(user_msg, ai_response):
     """Append a new exchange to the in-memory cache and persist it."""
     global memory_cache
     entry = {"user": user_msg, "jarvik": ai_response}
-    memory_cache.append(entry)
-    if MAX_MEMORY_ENTRIES and len(memory_cache) > MAX_MEMORY_ENTRIES:
-        memory_cache = memory_cache[-MAX_MEMORY_ENTRIES:]
-    flush_memory()
+    with memory_lock:
+        memory_cache.append(entry)
+        if MAX_MEMORY_ENTRIES and len(memory_cache) > MAX_MEMORY_ENTRIES:
+            memory_cache = memory_cache[-MAX_MEMORY_ENTRIES:]
+        _flush_memory_locked()
 
 def flush_memory() -> None:
     """Write the cached memory to disk respecting the entry limit."""
-    lines = memory_cache[-MAX_MEMORY_ENTRIES:] if MAX_MEMORY_ENTRIES else memory_cache
+    with memory_lock:
+        _flush_memory_locked()
+
+def _flush_memory_locked() -> None:
+    """Write memory_cache to disk. Caller must hold ``memory_lock``."""
+    lines = (
+        memory_cache[-MAX_MEMORY_ENTRIES:] if MAX_MEMORY_ENTRIES else memory_cache
+    )
     with open(memory_path, "w", encoding="utf-8") as f:
         for item in lines:
             f.write(json.dumps(item) + "\n")
