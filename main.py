@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, send_file, after_this_request
+from flask import Flask, request, jsonify, send_file, after_this_request, g
+import rag_engine
 from rag_engine import (
     KnowledgeBase,
     dependency_status,
@@ -6,6 +7,41 @@ from rag_engine import (
     load_pdf_file,
     load_docx_file,
 )
+from auth import load_users, User
+import base64
+import secrets
+
+
+class MultiKnowledgeBase:
+    """Combine knowledge from the public folder and optional subfolders."""
+
+    def __init__(self, root: str):
+        self.root = root
+        self.bases: dict[str, KnowledgeBase | None] = {"": KnowledgeBase(root)}
+
+    def _get_base(self, sub: str) -> KnowledgeBase | None:
+        kb = self.bases.get(sub)
+        if kb is None:
+            path = os.path.join(self.root, sub)
+            if os.path.isdir(path):
+                kb = KnowledgeBase(path)
+            else:
+                kb = None
+            self.bases[sub] = kb
+        return kb
+
+    def search(self, query: str, folders: list[str] | None = None, threshold: float | None = None) -> list[str]:
+        chunks = []
+        for sub in [""] + (folders or []):
+            kb = self._get_base(sub)
+            if kb:
+                chunks.extend(kb.chunks)
+        return rag_engine.search_knowledge(query, chunks, threshold or RAG_THRESHOLD)
+
+    def reload(self) -> None:
+        for kb in self.bases.values():
+            if kb:
+                kb.reload()
 import json
 import os
 import tempfile
@@ -28,12 +64,67 @@ except ValueError:
 
 # Set base directory relative to this file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-memory_path = os.path.join(BASE_DIR, "memory", "public.jsonl")
-# Lock file to coordinate memory writes across processes
-memory_lock = FileLock(f"{memory_path}.lock")
-# Ensure memory directory and file exist
-os.makedirs(os.path.dirname(memory_path), exist_ok=True)
-open(memory_path, "a", encoding="utf-8").close()
+
+# --- Authentication setup -------------------------------------------------
+USERS_FILE = os.path.join(BASE_DIR, "users.json")
+users = load_users(USERS_FILE)
+AUTH_ENABLED = bool(users)
+TOKENS: dict[str, str] = {}
+
+
+def _user_from_basic(auth_header: str) -> User | None:
+    try:
+        encoded = auth_header.split(None, 1)[1]
+        nick, pwd = base64.b64decode(encoded).decode("utf-8").split(":", 1)
+    except Exception:
+        return None
+    user = users.get(nick)
+    if user and user.verify(pwd):
+        return user
+    return None
+
+
+def _user_from_token(token: str) -> User | None:
+    nick = TOKENS.get(token)
+    if nick:
+        return users.get(nick)
+    return None
+
+
+def get_authenticated_user() -> User | None:
+    if not AUTH_ENABLED:
+        return None
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Basic "):
+        return _user_from_basic(auth_header)
+    if auth_header.startswith("Bearer "):
+        return _user_from_token(auth_header.split(None, 1)[1])
+    token = request.headers.get("X-Token")
+    if token:
+        return _user_from_token(token)
+    return None
+
+
+def require_auth(f):
+    from functools import wraps
+
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not AUTH_ENABLED:
+            return f(*args, **kwargs)
+        user = get_authenticated_user()
+        if not user:
+            return jsonify({"error": "unauthorized"}), 401
+        g.current_user = user
+        return f(*args, **kwargs)
+
+    return wrapper
+
+# --- Memory handling ------------------------------------------------------
+MEMORY_DIR = os.path.join(BASE_DIR, "memory")
+DEFAULT_MEMORY_FOLDER = "public"
+memory_caches: dict[str, list[dict]] = {}
+memory_locks: dict[str, FileLock] = {}
 
 # Jarvik now keeps conversation history indefinitely.
 # To enforce a limit, set the ``MAX_MEMORY_ENTRIES`` environment variable
@@ -44,7 +135,7 @@ MAX_MEMORY_ENTRIES = int(limit_env) if limit_env and limit_env.isdigit() else No
 app = Flask(__name__)
 
 # Načti znalosti při startu
-knowledge = KnowledgeBase(os.path.join(BASE_DIR, "knowledge"))
+knowledge = MultiKnowledgeBase(os.path.join(BASE_DIR, "knowledge"))
 print("✅ Znalosti načteny.")
 deps = dependency_status()
 if not deps["pdf"]:
@@ -52,52 +143,89 @@ if not deps["pdf"]:
 if not deps["docx"]:
     print("⚠️  DOCX soubory se nenačtou – nainstalujte balíček python-docx")
 
-def _read_memory_file():
-    """Return memory entries loaded from disk respecting the limit."""
-    if os.path.exists(memory_path):
-        with open(memory_path, "r", encoding="utf-8") as f:
+
+def _ensure_memory(folder: str) -> tuple[str, FileLock]:
+    path = os.path.join(MEMORY_DIR, f"{folder}.jsonl")
+    if folder not in memory_locks:
+        os.makedirs(MEMORY_DIR, exist_ok=True)
+        open(path, "a", encoding="utf-8").close()
+        memory_locks[folder] = FileLock(f"{path}.lock")
+    return path, memory_locks[folder]
+
+
+def _read_memory_file(folder: str) -> list[dict]:
+    path, _ = _ensure_memory(folder)
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
             lines = f.readlines()
             if MAX_MEMORY_ENTRIES:
                 lines = lines[-MAX_MEMORY_ENTRIES:]
             return [json.loads(line) for line in lines if line.strip()]
     return []
 
-# Cache memory at startup
-memory_cache = _read_memory_file()
 
-def load_memory():
-    """Return the cached conversation memory."""
-    return memory_cache
+# Cache default memory at startup
+memory_caches[DEFAULT_MEMORY_FOLDER] = _read_memory_file(DEFAULT_MEMORY_FOLDER)
 
-def reload_memory() -> list[dict]:
-    """Reload conversation history from disk into the cache."""
-    global memory_cache
-    memory_cache = _read_memory_file()
-    return memory_cache
 
-def append_to_memory(user_msg, ai_response):
-    """Append a new exchange to the in-memory cache and persist it."""
-    global memory_cache
+def load_memory(folders: list[str] | None = None) -> list[dict]:
+    """Return cached conversation memory from the given folders."""
+    folders = [DEFAULT_MEMORY_FOLDER] + (folders or [])
+    entries: list[dict] = []
+    for folder in folders:
+        cache = memory_caches.get(folder)
+        if cache is None:
+            cache = _read_memory_file(folder)
+            memory_caches[folder] = cache
+        entries.extend(cache)
+    return entries
+
+
+def reload_memory(folders: list[str] | None = None) -> None:
+    for folder in [DEFAULT_MEMORY_FOLDER] + (folders or []):
+        memory_caches[folder] = _read_memory_file(folder)
+
+
+def append_to_memory(user_msg: str, ai_response: str, folder: str = DEFAULT_MEMORY_FOLDER) -> None:
     entry = {"user": user_msg, "jarvik": ai_response}
-    with memory_lock:
-        memory_cache.append(entry)
-        if MAX_MEMORY_ENTRIES and len(memory_cache) > MAX_MEMORY_ENTRIES:
-            memory_cache = memory_cache[-MAX_MEMORY_ENTRIES:]
-        _flush_memory_locked()
+    path, lock = _ensure_memory(folder)
+    cache = memory_caches.setdefault(folder, _read_memory_file(folder))
+    with lock:
+        cache.append(entry)
+        if MAX_MEMORY_ENTRIES and len(cache) > MAX_MEMORY_ENTRIES:
+            cache[:] = cache[-MAX_MEMORY_ENTRIES:]
+        _flush_memory_locked(folder)
 
-def flush_memory() -> None:
-    """Write the cached memory to disk respecting the entry limit."""
-    with memory_lock:
-        _flush_memory_locked()
 
-def _flush_memory_locked() -> None:
-    """Write memory_cache to disk. Caller must hold ``memory_lock``."""
-    lines = (
-        memory_cache[-MAX_MEMORY_ENTRIES:] if MAX_MEMORY_ENTRIES else memory_cache
-    )
-    with open(memory_path, "w", encoding="utf-8") as f:
+def flush_memory(folders: list[str] | None = None) -> None:
+    for folder in [DEFAULT_MEMORY_FOLDER] + (folders or []):
+        path, lock = _ensure_memory(folder)
+        with lock:
+            _flush_memory_locked(folder)
+
+
+def _flush_memory_locked(folder: str) -> None:
+    path, _ = _ensure_memory(folder)
+    cache = memory_caches.get(folder, [])
+    lines = cache[-MAX_MEMORY_ENTRIES:] if MAX_MEMORY_ENTRIES else cache
+    with open(path, "w", encoding="utf-8") as f:
         for item in lines:
             f.write(json.dumps(item) + "\n")
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    if not AUTH_ENABLED:
+        return jsonify({"error": "auth disabled"}), 400
+    data = request.get_json(silent=True) or {}
+    nick = data.get("nick") or data.get("username")
+    password = data.get("password", "")
+    user = users.get(nick)
+    if not user or not user.verify(password):
+        return jsonify({"error": "invalid credentials"}), 401
+    token = secrets.token_hex(16)
+    TOKENS[token] = nick
+    return jsonify({"token": token})
 
 def search_memory(query, memory_entries):
     results = []
@@ -110,15 +238,17 @@ def search_memory(query, memory_entries):
     return results
 
 @app.route("/ask", methods=["POST"])
+@require_auth
 def ask():
     debug_log = []
     data = request.get_json(silent=True)
     message = (data or {}).get("message", "")
 
-    memory_context = load_memory()
+    user: User | None = getattr(g, "current_user", None)
+    memory_context = load_memory(user.memory_folders if user else None)
     debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
 
-    rag_context = knowledge.search(message, threshold=RAG_THRESHOLD)
+    rag_context = knowledge.search(message, folders=user.knowledge_folders if user else None, threshold=RAG_THRESHOLD)
     debug_log.append(f"📚 Kontext z RAG: {len(rag_context)} výsledků")
 
     # Vytvoření promptu pro model
@@ -141,11 +271,13 @@ def ask():
         debug_log.append(str(e))
         return jsonify({"error": "❌ Chyba při komunikaci s Ollamou", "debug": debug_log}), 500
 
-    append_to_memory(message, output)
+    target_folder = user.memory_folders[0] if user and user.memory_folders else DEFAULT_MEMORY_FOLDER
+    append_to_memory(message, output, folder=target_folder)
 
 
 
 @app.route("/ask_file", methods=["POST"])
+@require_auth
 def ask_file():
     debug_log = []
     message = request.form.get("message", "")
@@ -172,10 +304,11 @@ def ask_file():
         finally:
             os.unlink(tmp_path)
 
-    memory_context = load_memory()
+    user: User | None = getattr(g, "current_user", None)
+    memory_context = load_memory(user.memory_folders if user else None)
     debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
 
-    rag_context = knowledge.search(message, threshold=RAG_THRESHOLD)
+    rag_context = knowledge.search(message, folders=user.knowledge_folders if user else None, threshold=RAG_THRESHOLD)
     if file_text:
         rag_context = [file_text] + rag_context
     debug_log.append(f"📚 Kontext z RAG: {len(rag_context)} výsledků")
@@ -204,7 +337,8 @@ def ask_file():
             500,
         )
 
-    append_to_memory(message, output)
+    target_folder = user.memory_folders[0] if user and user.memory_folders else DEFAULT_MEMORY_FOLDER
+    append_to_memory(message, output, folder=target_folder)
 
     if ext in {".txt", ".pdf", ".docx"}:
         with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp_out:
@@ -248,24 +382,30 @@ def ask_file():
     return jsonify({"response": output, "debug": debug_log})
 
 @app.route("/memory/add", methods=["POST"])
+@require_auth
 def memory_add():
     data = request.get_json(silent=True) or {}
     user_msg = data.get("user")
     jarvik_msg = data.get("jarvik")
     if not user_msg or not jarvik_msg:
         return jsonify({"error": "user and jarvik required"}), 400
-    append_to_memory(user_msg, jarvik_msg)
+    user: User | None = getattr(g, "current_user", None)
+    folder = user.memory_folders[0] if user and user.memory_folders else DEFAULT_MEMORY_FOLDER
+    append_to_memory(user_msg, jarvik_msg, folder=folder)
     return jsonify({"status": "ok"})
 
 @app.route("/memory/search")
+@require_auth
 def memory_search():
     query = request.args.get("q", "")
-    memory_entries = load_memory()
+    user: User | None = getattr(g, "current_user", None)
+    memory_entries = load_memory(user.memory_folders if user else None)
     if not query:
         return jsonify(memory_entries[-5:])
     return jsonify(search_memory(query, memory_entries))
 
 @app.route("/knowledge/search")
+@require_auth
 def knowledge_search():
     query = request.args.get("q", "")
     thresh_param = request.args.get("threshold") or request.args.get("t")
@@ -275,14 +415,23 @@ def knowledge_search():
         thresh = RAG_THRESHOLD
     if not query:
         return jsonify([])
-    return jsonify(knowledge.search(query, threshold=thresh))
+    user: User | None = getattr(g, "current_user", None)
+    return jsonify(
+        knowledge.search(
+            query,
+            folders=user.knowledge_folders if user else None,
+            threshold=thresh,
+        )
+    )
 
 
 @app.route("/knowledge/reload", methods=["POST"])
+@require_auth
 def knowledge_reload():
     """Reload knowledge base files and return how many chunks were loaded."""
     knowledge.reload()
-    reload_memory()
+    user: User | None = getattr(g, "current_user", None)
+    reload_memory(user.memory_folders if user else None)
     print("✅ Znalosti načteny.")
     deps = dependency_status()
     if not deps["pdf"]:
@@ -293,6 +442,7 @@ def knowledge_reload():
 
 
 @app.route("/model", methods=["GET", "POST"])
+@require_auth
 def model_route():
     """Get or switch the active model."""
     if request.method == "GET":
