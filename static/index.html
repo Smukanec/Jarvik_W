@@ -136,6 +136,7 @@
     function authFetch(url, options = {}) {
       options.headers = options.headers || {};
       if (token) options.headers['Authorization'] = 'Bearer ' + token;
+      if (apiKey) options.headers['X-API-Key'] = apiKey;
       return fetch(url, options);
     }
 
@@ -180,6 +181,7 @@
     async function checkAuth() {
       if (!token) {
         document.getElementById('login').style.display = 'block';
+        document.getElementById('apikey').value = apiKey;
         return;
       }
       const res = await authFetch('/model');

@@ -77,7 +77,14 @@ def client(monkeypatch, tmp_path):
     # Stub network call to Ollama
     import requests
 
-    monkeypatch.setattr(requests, "post", lambda *a, **k: DummyResp())
+    post_calls = []
+
+    def fake_post(url, *a, **k):
+        post_calls.append((url, k))
+        return DummyResp()
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    main._post_calls = post_calls
 
     main.app.config["TESTING"] = True
     return main.app.test_client()
@@ -95,6 +102,15 @@ def test_ask_endpoint(client):
     assert data["response"] == "dummy"
 
 
+def test_ask_openai(client):
+    import main
+    headers = _auth()
+    headers["X-API-Key"] = "key"
+    res = client.post("/ask", json={"message": "hi"}, headers=headers)
+    assert res.status_code == 200
+    assert main._post_calls[-1][0].startswith("https://api.openai.com")
+
+
 def test_memory_search(client):
     res = client.get("/memory/search", headers=_auth())
     assert res.status_code == 200
@@ -103,6 +119,18 @@ def test_memory_search(client):
     res = client.get("/memory/search", query_string={"q": "foo"}, headers=_auth())
     assert res.status_code == 200
     assert res.get_json()[0]["user"] == "foo"
+
+
+def test_memory_search_diacritics(client):
+    import main
+    main.memory_caches[main.DEFAULT_MEMORY_FOLDER].append({
+        "user": "DJ \u0160muk",
+        "jarvik": "bio"
+    })
+
+    res = client.get("/memory/search", query_string={"q": "dj smuk"}, headers=_auth())
+    assert res.status_code == 200
+    assert any("\u0160muk" in e["user"] for e in res.get_json())
 
 
 def test_knowledge_search(client):
