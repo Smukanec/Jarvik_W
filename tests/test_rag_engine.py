@@ -140,3 +140,19 @@ def test_knowledge_base_multiple_folders(tmp_path):
 
     assert any("hello" in c for c in kb.chunks)
     assert any("world" in c for c in kb.chunks)
+
+
+def test_knowledge_base_dj_smuk_search(tmp_path):
+    """KnowledgeBase can search text with diacritics."""
+    folder = tmp_path / "kb"
+    folder.mkdir()
+    text = (
+        "DJ \u0160muk is a Czech DJ and producer known for high\u2011energy sets that "
+        "make crowds dance. Despite the name similarity to some websites, DJ \u0160muk"
+        " is a person, not an online platform."
+    )
+    (folder / "dj_smuk_info.txt").write_text(text, encoding="utf-8")
+
+    kb = KnowledgeBase(str(folder))
+
+    assert kb.search("DJ \u0160muk") == [text]
