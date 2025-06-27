@@ -89,6 +89,9 @@
   <button onclick="switchModel()">Switch model</button>
   <pre id="model-status"></pre>
 
+  <pre id="token-display"></pre>
+  <button onclick="copyToken()">Copy token</button>
+
   <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea><br>
   <input type="file" id="file" accept=".txt,.pdf,.docx"><br>
   <button onclick="ask()">Odeslat</button>
@@ -126,6 +129,10 @@
     let token = localStorage.getItem('token') || '';
     let apiKey = localStorage.getItem('apiKey') || '';
 
+    function copyToken() {
+      if (token) navigator.clipboard.writeText(token);
+    }
+
     function authFetch(url, options = {}) {
       options.headers = options.headers || {};
       if (token) options.headers['Authorization'] = 'Bearer ' + token;
@@ -161,10 +168,11 @@
       document.getElementById('current-model').textContent = name;
     }
 
-    function showInterface() {
+   function showInterface() {
       document.getElementById('login').style.display = 'none';
       document.getElementById('interface').style.display = 'block';
       loadModel();
+      document.getElementById('token-display').textContent = token;
       const select = document.getElementById('model-select');
       if (select) select.addEventListener('change', switchModel);
     }
@@ -198,6 +206,7 @@
         const data = await res.json();
         token = data.token;
         localStorage.setItem('token', token);
+        document.getElementById('token-display').textContent = token;
         document.getElementById('login-status').textContent = '';
         showInterface();
       } else {

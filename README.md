@@ -363,6 +363,8 @@ obtain a token from the `/login` endpoint. The token is stored in
 An optional API key field is provided and saved in `localStorage` as well. If
 `users.json` is missing authentication is disabled and the interface loads
 immediately.
+The token is shown in the web interface and can be copied with a button after
+logging in.
 
 ## Running Tests
 
