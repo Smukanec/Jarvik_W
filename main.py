@@ -5,6 +5,7 @@ from rag_engine import (
     load_txt_file,
     load_pdf_file,
     load_docx_file,
+    _strip_diacritics,
 )
 from auth import load_users, User
 import base64
@@ -21,6 +22,8 @@ MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
 FLASK_PORT = int(os.getenv("FLASK_PORT", 8010))
 # Base URL for the Ollama server
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+# Model for OpenAI fallback
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 
 # Threshold for knowledge base search
 threshold_env = os.getenv("RAG_THRESHOLD")
@@ -223,10 +226,13 @@ def login():
     return jsonify({"token": token})
 
 def search_memory(query, memory_entries):
+    """Return up to five memory entries containing *query* in any form."""
     results = []
-    q = query.lower()
+    q = _strip_diacritics(query.lower())
     for entry in reversed(memory_entries):
-        if q in entry.get("user", "").lower() or q in entry.get("jarvik", "").lower():
+        user_text = _strip_diacritics(entry.get("user", "").lower())
+        jarvik_text = _strip_diacritics(entry.get("jarvik", "").lower())
+        if q in user_text or q in jarvik_text:
             results.append(entry)
         if len(results) >= 5:
             break
@@ -237,7 +243,9 @@ def search_memory(query, memory_entries):
 def ask():
     debug_log = []
     data = request.get_json(silent=True)
-    message = (data or {}).get("message", "")
+    data = data or {}
+    message = data.get("message", "")
+    api_key = request.headers.get("X-API-Key") or data.get("api_key")
 
     user: User | None = getattr(g, "current_user", None)
     folders = [user.nick] + user.memory_folders if user else None
@@ -257,13 +265,25 @@ def ask():
 
     try:
         import requests
-        response = requests.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={"model": MODEL_NAME, "prompt": prompt, "stream": False}
-        )
-        response.raise_for_status()
-        result = response.json()
-        output = result.get("response", "").strip()
+        if api_key:
+            res = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={
+                    "model": OPENAI_MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+            res.raise_for_status()
+            output = res.json()["choices"][0]["message"]["content"].strip()
+        else:
+            response = requests.post(
+                f"{OLLAMA_URL}/api/generate",
+                json={"model": MODEL_NAME, "prompt": prompt, "stream": False},
+            )
+            response.raise_for_status()
+            result = response.json()
+            output = result.get("response", "").strip()
     except Exception as e:
         debug_log.append(str(e))
         return jsonify({"error": "❌ Chyba při komunikaci s Ollamou", "debug": debug_log}), 500
@@ -278,6 +298,7 @@ def ask():
 def ask_file():
     debug_log = []
     message = request.form.get("message", "")
+    api_key = request.headers.get("X-API-Key") or request.form.get("api_key")
 
     uploaded = request.files.get("file")
     file_text = ""
@@ -322,13 +343,25 @@ def ask_file():
 
     try:
         import requests
-        response = requests.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={"model": MODEL_NAME, "prompt": prompt, "stream": False},
-        )
-        response.raise_for_status()
-        result = response.json()
-        output = result.get("response", "").strip()
+        if api_key:
+            res = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={
+                    "model": OPENAI_MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+            res.raise_for_status()
+            output = res.json()["choices"][0]["message"]["content"].strip()
+        else:
+            response = requests.post(
+                f"{OLLAMA_URL}/api/generate",
+                json={"model": MODEL_NAME, "prompt": prompt, "stream": False},
+            )
+            response.raise_for_status()
+            result = response.json()
+            output = result.get("response", "").strip()
     except Exception as e:
         debug_log.append(str(e))
         return (
