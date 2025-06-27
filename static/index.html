@@ -44,6 +44,15 @@
       margin-top: 1em;
       color: #c8f6c8;
     }
+    #panels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1em;
+    }
+    .panel {
+      flex: 1 1 30%;
+      min-width: 250px;
+    }
     details summary {
       cursor: pointer;
       font-weight: bold;
@@ -97,16 +106,26 @@
   <button onclick="ask()">Odeslat</button>
   <pre id="activity"></pre>
 
-  <pre id="response"></pre>
-  <a id="download" style="display:none" href="#">⬇️ Stáhnout odpověď</a>
+  <div id="panels">
+    <div class="panel">
+      <h3>📖 Kontext</h3>
+      <pre id="context"></pre>
+    </div>
+    <div class="panel">
+      <h3>🤖 Odpověď</h3>
+      <pre id="response"></pre>
+      <a id="download" style="display:none" href="#">⬇️ Stáhnout odpověď</a>
+    </div>
+    <div class="panel">
+      <h3>🧪 Debug</h3>
+      <pre id="debug"></pre>
+    </div>
+  </div>
 
   <details open>
     <summary>🕘 Historie</summary>
     <pre id="log"></pre>
   </details>
-
-  <h3>🧪 Debug</h3>
-  <pre id="debug"></pre>
 
   <h3>📊 Stav</h3>
   <pre id="status">🟢 Připraven.</pre>
@@ -227,6 +246,26 @@
       document.getElementById("activity").textContent = "Čekám na odpověď…";
       document.getElementById("duration").textContent = "";
 
+      // try to load context for display
+      try {
+        const ctxRes = await authFetch(
+          "/knowledge/search?q=" + encodeURIComponent(msg)
+        );
+        if (ctxRes.ok) {
+          const ctxData = await ctxRes.json();
+          const ctxText = ctxData.length
+            ? ctxData.join("\n\n---\n\n")
+            : "(žádný kontext)";
+          document.getElementById("context").textContent = ctxText;
+        } else {
+          document.getElementById("context").textContent =
+            "❌ Kontext se nepodařilo načíst";
+        }
+      } catch (e) {
+        document.getElementById("context").textContent =
+          "❌ Kontext se nepodařilo načíst";
+      }
+
       // measure the time it takes to get a response
       const startTime = performance.now();
 
@@ -245,7 +284,17 @@
       const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
       const timestamp = new Date().toLocaleTimeString();
 
-      if (contentType.includes("application/json")) {
+      if (!res.ok) {
+        let errText = res.statusText || `HTTP ${res.status}`;
+        if (contentType.includes("application/json")) {
+          const data = await res.json();
+          errText = data.error || errText;
+          document.getElementById("debug").textContent = data.debug ? data.debug.join("\n") : "(žádný debug)";
+        }
+        document.getElementById("response").textContent = `❌ ${errText}`;
+        document.getElementById("download").style.display = "none";
+        conversationLog += `[${timestamp}] 👤 ${msg}\n[${timestamp}] ❌ ${errText}\n\n`;
+      } else if (contentType.includes("application/json")) {
         const data = await res.json();
         document.getElementById("response").textContent = data.response || "❌ Chyba odpovědi";
         document.getElementById("debug").textContent = data.debug ? data.debug.join("\n") : "(žádný debug)";
