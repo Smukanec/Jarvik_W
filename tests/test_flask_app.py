@@ -111,6 +111,15 @@ def test_ask_openai(client):
     assert main._post_calls[-1][0].startswith("https://api.openai.com")
 
 
+def test_ask_web(client, monkeypatch):
+    import main
+    monkeypatch.setattr(main, "search_and_scrape", lambda q: "example")
+    res = client.post("/ask_web", json={"message": "who"}, headers=_auth())
+    data = res.get_json()
+    assert res.status_code == 200
+    assert data["response"] == "dummy"
+
+
 def test_memory_search(client):
     res = client.get("/memory/search", headers=_auth())
     assert res.status_code == 200

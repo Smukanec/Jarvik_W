@@ -15,6 +15,7 @@ import os
 import tempfile
 import subprocess
 from filelock import FileLock
+from tools.web_search import search_and_scrape
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
@@ -290,6 +291,48 @@ def ask():
 
     target_folder = user.nick if user else DEFAULT_MEMORY_FOLDER
     append_to_memory(message, output, folder=target_folder)
+
+
+@app.route("/ask_web", methods=["POST"])
+@require_auth
+def ask_web():
+    """Search the web for the query and include the result in the prompt."""
+    debug_log = []
+    data = request.get_json(silent=True) or {}
+    query = data.get("message", "")
+    api_key = request.headers.get("X-API-Key") or data.get("api_key")
+
+    web_info = search_and_scrape(query)
+    debug_log.append("🌐 Web search used")
+
+    prompt = f"{web_info}\n\nOt\u00e1zka: {query}\nOdpov\u011bz:"
+
+    try:
+        import requests
+        if api_key:
+            res = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={"model": OPENAI_MODEL, "messages": [{"role": "user", "content": prompt}]},
+            )
+            res.raise_for_status()
+            output = res.json()["choices"][0]["message"]["content"].strip()
+        else:
+            response = requests.post(
+                f"{OLLAMA_URL}/api/generate",
+                json={"model": MODEL_NAME, "prompt": prompt, "stream": False},
+            )
+            response.raise_for_status()
+            output = response.json().get("response", "").strip()
+    except Exception as e:  # pragma: no cover - network errors
+        debug_log.append(str(e))
+        return jsonify({"error": "❌ Chyba při komunikaci s Ollamou", "debug": debug_log}), 500
+
+    user: User | None = getattr(g, "current_user", None)
+    folder = user.nick if user else DEFAULT_MEMORY_FOLDER
+    append_to_memory(query, output, folder=folder)
+
+    return jsonify({"response": output, "debug": debug_log})
 
 
 

@@ -307,6 +307,7 @@ Jarvik exposes a few HTTP endpoints on the configured Flask port
 (default `8010`) that can be consumed by external applications such as ChatGPT:
 
 * `POST /ask` – ask Jarvik a question. The conversation is stored in memory.
+* `POST /ask_web` – perform a DuckDuckGo search and add the first result to the prompt.
 * `POST /memory/add` – manually append a `{ "user": "...", "jarvik": "..." }`
   record to the memory log.
 * `GET /memory/search?q=term` – search stored memory entries. When no query is
