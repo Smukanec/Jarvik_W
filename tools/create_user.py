@@ -38,6 +38,7 @@ def main() -> None:
     users.append({"nick": nick, "password_hash": auth.hash_password(password)})
     save_users(users)
     print(f"User '{nick}' added to {USERS_FILE}")
+    print("Restart the Flask server to load updated users.")
 
 
 if __name__ == "__main__":
