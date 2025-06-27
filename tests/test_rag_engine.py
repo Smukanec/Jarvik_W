@@ -111,6 +111,12 @@ def test_search_knowledge_diacritics_normalization():
     assert result == ["DJ \u0160muk"]
 
 
+def test_search_knowledge_word_boundary():
+    chunks = ["GR8DJEYM2A", "dj smuk"]
+    result = search_knowledge("dj", chunks)
+    assert result == ["dj smuk"]
+
+
 def test_knowledge_base_env_threshold(monkeypatch, knowledge_dir):
     kb = KnowledgeBase(str(knowledge_dir))
     # Without the environment variable there should be no match
