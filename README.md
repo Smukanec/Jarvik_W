@@ -347,10 +347,18 @@ python -c "import auth; print(auth.hash_password('your_password'))"
 ### Adding users via helper script
 
 Run `tools/create_user.py` to append a new account to `users.json`. Existing
-nicks are skipped and the file is created automatically when missing.
+nicks are skipped and the file is created automatically when missing. Execute
+the helper as a module from the repository root so Python can locate
+`auth.py`:
 
 ```bash
-python tools/create_user.py --nick bob --password pw
+python -m tools.create_user --nick bob --password pw
+```
+
+For example, to create a user `alice` with password `SecretPass123` run:
+
+```bash
+python -m tools.create_user --nick alice --password SecretPass123
 ```
 
 The repository also includes a `users.example.json` file containing the same
