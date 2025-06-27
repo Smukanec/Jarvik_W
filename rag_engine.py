@@ -1,6 +1,7 @@
 import os
 import glob
 import re
+import unicodedata
 from difflib import SequenceMatcher
 
 # Flags indicating whether optional dependencies are available
@@ -36,6 +37,12 @@ __all__ = [
     "KnowledgeBase",
     "dependency_status",
 ]
+
+
+def _strip_diacritics(text: str) -> str:
+    """Return *text* without any diacritical marks."""
+    normalized = unicodedata.normalize("NFD", text)
+    return "".join(c for c in normalized if not unicodedata.combining(c))
 
 def load_txt_file(path):
     with open(path, "r", encoding="utf-8") as f:
@@ -109,12 +116,13 @@ def search_knowledge(query, knowledge_chunks, threshold=0.6):
     exceeds the given *threshold*.
     """
 
-    clean_query = re.sub(r"\W+", " ", query.lower())
+    normalized_query = _strip_diacritics(query.lower())
+    clean_query = re.sub(r"\W+", " ", normalized_query)
     query_words = [w for w in clean_query.split() if w]
 
     matches = []
     for chunk in knowledge_chunks:
-        chunk_lower = chunk.lower()
+        chunk_lower = _strip_diacritics(chunk.lower())
         ratio = SequenceMatcher(None, clean_query, chunk_lower).ratio()
 
         if any(word in chunk_lower for word in query_words) or ratio >= threshold:

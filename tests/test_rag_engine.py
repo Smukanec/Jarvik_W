@@ -105,6 +105,12 @@ def test_search_knowledge_czech_punctuation():
     assert result == ["N\u011bco o IPv6 protokolu."]
 
 
+def test_search_knowledge_diacritics_normalization():
+    chunks = ["DJ \u0160muk"]
+    result = search_knowledge("dj smuk", chunks)
+    assert result == ["DJ \u0160muk"]
+
+
 def test_knowledge_base_env_threshold(monkeypatch, knowledge_dir):
     kb = KnowledgeBase(str(knowledge_dir))
     # Without the environment variable there should be no match
