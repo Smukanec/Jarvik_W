@@ -15,6 +15,7 @@ import os
 import tempfile
 import subprocess
 from filelock import FileLock
+import datetime
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
@@ -263,6 +264,11 @@ def ask():
     if memory_context:
         prompt += "\n" + "\n".join([f"Minulý dotaz: {m['user']} -> {m['jarvik']}" for m in memory_context[-5:]])
 
+    log_path = os.path.join(BASE_DIR, "final_prompt.txt")
+    with open(log_path, "a", encoding="utf-8") as log_file:
+        ts = datetime.datetime.now().isoformat()
+        log_file.write(f"{ts}\n{prompt}\n")
+
     try:
         import requests
         if api_key:
@@ -340,6 +346,11 @@ def ask_file():
         prompt += "\n" + "\n".join([
             f"Minulý dotaz: {m['user']} -> {m['jarvik']}" for m in memory_context[-5:]
         ])
+
+    log_path = os.path.join(BASE_DIR, "final_prompt.txt")
+    with open(log_path, "a", encoding="utf-8") as log_file:
+        ts = datetime.datetime.now().isoformat()
+        log_file.write(f"{ts}\n{prompt}\n")
 
     try:
         import requests
