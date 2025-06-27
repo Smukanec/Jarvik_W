@@ -362,7 +362,8 @@ python -m tools.create_user --nick alice --password SecretPass123
 ```
 
 The repository also includes a `users.example.json` file containing the same
-sample for quick reference.
+sample for quick reference. Restart the Flask server whenever `users.json`
+changes so new accounts are loaded.
 
 The web interface now starts with a login form. Enter your nick and password to
 obtain a token from the `/login` endpoint. The token is stored in
