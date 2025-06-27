@@ -344,6 +344,15 @@ Generate the `password_hash` value with:
 python -c "import auth; print(auth.hash_password('your_password'))"
 ```
 
+### Adding users via helper script
+
+Run `tools/create_user.py` to append a new account to `users.json`. Existing
+nicks are skipped and the file is created automatically when missing.
+
+```bash
+python tools/create_user.py --nick bob --password pw
+```
+
 The repository also includes a `users.example.json` file containing the same
 sample for quick reference.
 
