@@ -125,7 +125,10 @@ def search_knowledge(query, knowledge_chunks, threshold=0.6):
         chunk_lower = _strip_diacritics(chunk.lower())
         ratio = SequenceMatcher(None, clean_query, chunk_lower).ratio()
 
-        if any(word in chunk_lower for word in query_words) or ratio >= threshold:
+        if any(
+            re.search(r"\b" + re.escape(word) + r"\b", chunk_lower)
+            for word in query_words
+        ) or ratio >= threshold:
             matches.append((ratio, chunk[:500]))  # Shorten for the prompt
 
     matches.sort(key=lambda x: x[0], reverse=True)
