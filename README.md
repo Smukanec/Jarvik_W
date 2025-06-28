@@ -45,8 +45,9 @@ alias launches the default Gemma 2B model.
 
 Knowledge files are loaded from the `knowledge/` folder at startup. Jarvik uses
 the `KnowledgeBase` class from `rag_engine.py`, which reads all `.txt`, `.pdf`
-and `.docx` files and stores their non-empty contents in memory. PDF and DOCX
-support requires the optional packages `PyPDF2` and `python-docx` listed in
+and `.docx` files, splits them into paragraphs and indexes them with FAISS.
+PDF and DOCX support requires the optional packages `PyPDF2` and `python-docx`
+while vector search relies on `sentence-transformers` and `faiss-cpu` listed in
 `requirements.txt`.
 
 ### Folder layout and per-user data
@@ -57,9 +58,9 @@ Conversation history is stored in `memory/`. The public log lives in
 `knowledge/<nick>` subfolders listed in `users.json` are loaded for that user in
 addition to the public files.
 
-The fuzzy search threshold defaults to `0.6`. You can tweak how loosely queries
-match the knowledge base by setting the `RAG_THRESHOLD` environment variable to a
-floating point value.
+The similarity threshold for vector search defaults to `0.7`. You can tweak how
+strictly queries match the knowledge base by setting the `RAG_THRESHOLD`
+environment variable to a floating point value.
 
 ### Text-only mode
 

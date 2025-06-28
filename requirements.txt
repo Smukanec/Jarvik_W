@@ -7,4 +7,6 @@ fpdf
 filelock
 duckduckgo-search
 beautifulsoup4
+sentence-transformers
+faiss-cpu
 
