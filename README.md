@@ -393,8 +393,10 @@ Unit tests live in the `tests/` directory. Execute them with:
 
 ```bash
 pytest
-ruff .
+ruff check .
 ```
+
+Run `ruff --fix` to automatically resolve simple issues.
 
 ## License
 
