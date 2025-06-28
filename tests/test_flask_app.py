@@ -213,3 +213,36 @@ def test_model_switch(client, monkeypatch):
     assert res.status_code == 200
     assert called
 
+
+def test_feedback_endpoint(client):
+    import main, os, json
+
+    fb_path = os.path.join(main.MEMORY_DIR, "bob", "private.jsonl")
+    if os.path.exists(fb_path):
+        os.unlink(fb_path)
+
+    res = client.post(
+        "/feedback",
+        json={"agree": True, "question": "q", "answer": "a", "correction": "c"},
+        headers=_auth(),
+    )
+    assert res.status_code == 200
+    assert not os.path.exists(fb_path)
+
+    res = client.post(
+        "/feedback",
+        json={"agree": False, "question": "q", "answer": "a", "correction": "c"},
+        headers=_auth(),
+    )
+    assert res.status_code == 200
+    assert os.path.exists(fb_path)
+    with open(fb_path, "r", encoding="utf-8") as f:
+        lines = [json.loads(l) for l in f if l.strip()]
+    assert len(lines) == 1
+    entry = lines[0]
+    assert entry["type"] == "feedback"
+    assert entry["agree"] is False
+    assert entry["question"] == "q"
+    assert entry["answer"] == "a"
+    assert entry["correction"] == "c"
+
