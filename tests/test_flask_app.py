@@ -246,3 +246,22 @@ def test_feedback_endpoint(client):
     assert entry["answer"] == "a"
     assert entry["correction"] == "c"
 
+
+def test_get_corrections_and_prompt_notes(client):
+    import main, os, json
+
+    fb_path = os.path.join(main.MEMORY_DIR, "bob", "private.jsonl")
+    os.makedirs(os.path.dirname(fb_path), exist_ok=True)
+    with open(fb_path, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"original_question": "hi", "correction": "answer"}) + "\n")
+
+    res = client.post("/ask", json={"message": "hi"}, headers=_auth())
+    assert res.status_code == 200
+
+    call = main._post_calls[-1][1]["json"]
+    if "prompt" in call:
+        prompt = call["prompt"]
+    else:
+        prompt = call["messages"][0]["content"]
+    assert "Poznámka: answer" in prompt
+

@@ -7,6 +7,7 @@ from rag_engine import (
     load_docx_file,
     _strip_diacritics,
 )
+import difflib
 from auth import load_users, User
 from tools.web_search import search_and_scrape
 import base64
@@ -240,6 +241,35 @@ def search_memory(query, memory_entries):
             break
     return results
 
+
+def get_corrections(nick: str, query: str, threshold: float = 0.7) -> list[str]:
+    """Return feedback corrections for *nick* similar to *query*."""
+    path = os.path.join(MEMORY_DIR, nick, "private.jsonl")
+    if not os.path.exists(path):
+        return []
+
+    notes: list[str] = []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except Exception:
+                    continue
+                original = entry.get("original_question") or entry.get("question")
+                correction = entry.get("correction")
+                if not original or not correction:
+                    continue
+                ratio = difflib.SequenceMatcher(None, original, query).ratio()
+                if ratio >= threshold:
+                    notes.append(correction)
+    except Exception:
+        return []
+    return notes
+
 @app.route("/ask", methods=["POST"])
 @require_auth
 def ask():
@@ -253,6 +283,9 @@ def ask():
     folders = [user.nick] + user.memory_folders if user else None
     memory_context = load_memory(folders)
     debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
+    corrections = get_corrections(user.nick, message) if user else []
+    if corrections:
+        debug_log.append(f"✏️ Opravy: {len(corrections)}")
 
     kb = get_knowledge_base(user)
     rag_context = kb.search(message, threshold=RAG_THRESHOLD)
@@ -264,6 +297,8 @@ def ask():
         prompt += "\n".join([f"Znalost: {chunk}" for chunk in rag_context])
     if memory_context:
         prompt += "\n" + "\n".join([f"Minulý dotaz: {m['user']} -> {m['jarvik']}" for m in memory_context[-5:]])
+    if corrections:
+        prompt += "\n" + "\n".join([f"Poznámka: {c}" for c in corrections])
 
     log_path = os.path.join(BASE_DIR, "final_prompt.txt")
     with open(log_path, "a", encoding="utf-8") as log_file:
@@ -315,6 +350,10 @@ def ask_web():
     memory_context = load_memory(folders)
     debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
 
+    corrections = get_corrections(user.nick, query) if user else []
+    if corrections:
+        debug_log.append(f"✏️ Opravy: {len(corrections)}")
+
     kb = get_knowledge_base(user)
     rag_context = kb.search(query, threshold=RAG_THRESHOLD)
     debug_log.append(f"📚 Kontext z RAG: {len(rag_context)} výsledků")
@@ -327,6 +366,8 @@ def ask_web():
         prompt += "\n" + "\n".join(
             [f"Minulý dotaz: {m['user']} -> {m['jarvik']}" for m in memory_context[-5:]]
         )
+    if corrections:
+        prompt += "\n" + "\n".join([f"Poznámka: {c}" for c in corrections])
 
     log_path = os.path.join(BASE_DIR, "final_prompt.txt")
     with open(log_path, "a", encoding="utf-8") as log_file:
@@ -394,6 +435,9 @@ def ask_file():
     folders = [user.nick] + user.memory_folders if user else None
     memory_context = load_memory(folders)
     debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
+    corrections = get_corrections(user.nick, message) if user else []
+    if corrections:
+        debug_log.append(f"✏️ Opravy: {len(corrections)}")
 
     kb = get_knowledge_base(user)
     rag_context = kb.search(message, threshold=RAG_THRESHOLD)
@@ -408,6 +452,8 @@ def ask_file():
         prompt += "\n" + "\n".join([
             f"Minulý dotaz: {m['user']} -> {m['jarvik']}" for m in memory_context[-5:]
         ])
+    if corrections:
+        prompt += "\n" + "\n".join([f"Poznámka: {c}" for c in corrections])
 
     log_path = os.path.join(BASE_DIR, "final_prompt.txt")
     with open(log_path, "a", encoding="utf-8") as log_file:
