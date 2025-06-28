@@ -23,11 +23,11 @@ bash install_jarvik.sh
 ```
 
 After running the installer, ensure the package `duckduckgo-search` is
-available in version 8.0.4 or newer. If needed, activate the virtual environment
+available in version 8.0 or newer. If needed, activate the virtual environment
 and run:
 
 ```bash
-pip install -U duckduckgo-search==8.0.4
+pip install -U duckduckgo-search>=8.0
 ```
 
 Make sure the commands `ollama`, `curl`, `lsof` and either `ss` (from
