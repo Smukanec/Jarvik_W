@@ -10,7 +10,9 @@ before launching.
 The Flask API listens on port `8010` by default, but you can override this using
 the `FLASK_PORT` environment variable. Set `OLLAMA_URL` to point at a remote
 Ollama instance if it is not running locally (defaults to
-`http://localhost:11434`).
+`http://localhost:11434`). When `OLLAMA_URL` targets another host the start
+scripts will not attempt to launch a local Ollama instance and all `ollama`
+commands automatically use the remote server.
 
 ## Installation
 

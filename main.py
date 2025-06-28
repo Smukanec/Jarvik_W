@@ -8,6 +8,7 @@ from rag_engine import (
     _strip_diacritics,
 )
 from auth import load_users, User
+from tools.web_search import search_and_scrape
 import base64
 import secrets
 import json
@@ -297,6 +298,67 @@ def ask():
     target_folder = user.nick if user else DEFAULT_MEMORY_FOLDER
     append_to_memory(message, output, folder=target_folder)
 
+
+
+@app.route("/ask_web", methods=["POST"])
+@require_auth
+def ask_web():
+    debug_log = []
+    data = request.get_json(silent=True) or {}
+    query = data.get("message", "")
+    if not query:
+        return jsonify({"error": "message required"}), 400
+    api_key = request.headers.get("X-API-Key") or data.get("api_key")
+
+    user: User | None = getattr(g, "current_user", None)
+    folders = [user.nick] + user.memory_folders if user else None
+    memory_context = load_memory(folders)
+    debug_log.append(f"🧠 Paměť: {len(memory_context)} záznamů")
+
+    kb = get_knowledge_base(user)
+    rag_context = kb.search(query, threshold=RAG_THRESHOLD)
+    debug_log.append(f"📚 Kontext z RAG: {len(rag_context)} výsledků")
+
+    web_info = search_and_scrape(query)
+    prompt = f"{web_info}\n\nOtázka: {query}\n"
+    if rag_context:
+        prompt += "\n".join([f"Znalost: {chunk}" for chunk in rag_context])
+    if memory_context:
+        prompt += "\n" + "\n".join(
+            [f"Minulý dotaz: {m['user']} -> {m['jarvik']}" for m in memory_context[-5:]]
+        )
+
+    log_path = os.path.join(BASE_DIR, "final_prompt.txt")
+    with open(log_path, "a", encoding="utf-8") as log_file:
+        ts = datetime.datetime.now().isoformat()
+        log_file.write(f"{ts}\n{prompt}\n")
+
+    try:
+        import requests
+        if api_key:
+            res = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={"model": OPENAI_MODEL, "messages": [{"role": "user", "content": prompt}]},
+            )
+            res.raise_for_status()
+            output = res.json()["choices"][0]["message"]["content"].strip()
+        else:
+            response = requests.post(
+                f"{OLLAMA_URL}/api/generate",
+                json={"model": MODEL_NAME, "prompt": prompt, "stream": False},
+            )
+            response.raise_for_status()
+            result = response.json()
+            output = result.get("response", "").strip()
+    except Exception as e:
+        debug_log.append(str(e))
+        return jsonify({"error": "❌ Chyba při komunikaci s Ollamou", "debug": debug_log}), 500
+
+    target_folder = user.nick if user else DEFAULT_MEMORY_FOLDER
+    append_to_memory(query, output, folder=target_folder)
+
+    return jsonify({"response": output, "debug": debug_log})
 
 
 @app.route("/ask_file", methods=["POST"])
