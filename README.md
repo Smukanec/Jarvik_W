@@ -22,6 +22,14 @@ Install dependencies and create the virtual environment:
 bash install_jarvik.sh
 ```
 
+After running the installer, ensure the package `duckduckgo-search` is
+available in version 0.8 or newer. If needed, activate the virtual environment
+and run:
+
+```bash
+pip install -U duckduckgo-search==0.8
+```
+
 Make sure the commands `ollama`, `curl`, `lsof` and either `ss` (from
 `iproute2`) or `nc` (from `netcat`) are available on your system.
 On Windows you can install the Windows Subsystem for Linux or download BusyBox for Windows (https://frippery.org/busybox/) to provide these commands. Place `busybox.exe` somewhere in your `PATH` and call `busybox nc` or `busybox ss` when needed.
