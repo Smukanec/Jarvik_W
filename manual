@@ -7,7 +7,7 @@ Flask API naslouchá na portu `8010`, který lze změnit proměnnou `FLASK_PORT`
 Pro vzdálenou Ollamu nastavte proměnnou `OLLAMA_URL` (výchozí
 `http://localhost:11434`).
 Citlivost vyhledávání ve znalostech můžete upravit proměnnou `RAG_THRESHOLD`
-(výchozí hodnota je `0.6`).
+(výchozí hodnota je `0.7`).
 
 ## Instalace
 
