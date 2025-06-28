@@ -247,6 +247,34 @@ def test_feedback_endpoint(client):
     assert entry["correction"] == "c"
 
 
+def test_feedback_entry_written(client):
+    """POSTing disagreeing feedback should create a private entry."""
+    import main, os, json
+
+    fb_path = os.path.join(main.MEMORY_DIR, "bob", "private.jsonl")
+    if os.path.exists(fb_path):
+        os.unlink(fb_path)
+
+    res = client.post(
+        "/feedback",
+        json={"agree": False, "question": "q", "answer": "a", "correction": "c"},
+        headers=_auth(),
+    )
+    assert res.status_code == 200
+    assert os.path.exists(fb_path)
+    with open(fb_path, "r", encoding="utf-8") as f:
+        data = [json.loads(l) for l in f if l.strip()]
+    assert data == [
+        {
+            "type": "feedback",
+            "agree": False,
+            "question": "q",
+            "answer": "a",
+            "correction": "c",
+        }
+    ]
+
+
 def test_get_corrections_and_prompt_notes(client):
     import main, os, json
 
@@ -264,4 +292,39 @@ def test_get_corrections_and_prompt_notes(client):
     else:
         prompt = call["messages"][0]["content"]
     assert "Poznámka: answer" in prompt
+
+
+def test_prompt_notes_with_mocked_file_and_similarity(client, monkeypatch):
+    """Corrections are appended to the prompt when similarity matches."""
+    import main, builtins, io, json, os
+
+    file_data = json.dumps({"original_question": "hi", "correction": "note"}) + "\n"
+    open_calls = []
+    real_open = builtins.open
+
+    def fake_open(path, mode="r", *args, **kwargs):
+        if path.endswith("private.jsonl") and "r" in mode:
+            open_calls.append(path)
+            return io.StringIO(file_data)
+        return real_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", fake_open)
+    monkeypatch.setattr(main.os.path, "exists", lambda p: True if p.endswith("private.jsonl") else os.path.exists(p))
+
+    class DummyMatcher:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def ratio(self):
+            return 1.0
+
+    monkeypatch.setattr(main.difflib, "SequenceMatcher", DummyMatcher)
+
+    res = client.post("/ask", json={"message": "hi"}, headers=_auth())
+    assert res.status_code == 200
+
+    call = main._post_calls[-1][1]["json"]
+    prompt = call.get("prompt") or call["messages"][0]["content"]
+    assert "Poznámka: note" in prompt
+    assert open_calls
 
