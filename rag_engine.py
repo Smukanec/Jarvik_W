@@ -2,6 +2,7 @@ import os
 import glob
 import re
 import unicodedata
+import difflib
 from typing import List
 
 # Optional dependencies -------------------------------------------------------
@@ -57,6 +58,30 @@ def _strip_diacritics(text: str) -> str:
     """Return *text* without any diacritical marks."""
     normalized = unicodedata.normalize("NFD", text)
     return "".join(c for c in normalized if not unicodedata.combining(c))
+
+
+def _normalize(text: str) -> str:
+    """Return lowercased *text* without punctuation or diacritics."""
+    text = _strip_diacritics(text)
+    text = re.sub(r"[^\w\s]", " ", text)
+    text = text.lower()
+    return " ".join(text.split())
+
+
+def _similarity(a: str, b: str) -> float:
+    """Return an ad-hoc similarity score between *a* and *b*."""
+    norm_a = _normalize(a)
+    norm_b = _normalize(b)
+    if norm_a:
+        if " " in norm_a:
+            if norm_a in norm_b:
+                return 1.0
+        elif norm_a in norm_b.split():
+            return 1.0
+    ratio = difflib.SequenceMatcher(None, norm_a, norm_b).ratio()
+    if set(norm_a.split()) & set(norm_b.split()):
+        ratio += 0.5
+    return min(ratio, 1.0)
 
 
 def load_txt_file(path: str) -> str:
@@ -139,13 +164,14 @@ class KnowledgeBase:
     """Manage loading and searching local knowledge files using FAISS."""
 
     def __init__(self, folder: str | List[str], model_name: str | None = None):
-        if not VECTOR_SUPPORT:
-            raise ImportError("sentence-transformers and faiss are required")
         self.folders = [folder] if isinstance(folder, str) else list(folder)
         self.model_name = model_name or os.getenv(
             "RAG_MODEL", "paraphrase-multilingual-MiniLM-L12-v2"
         )
-        self.model = SentenceTransformer(self.model_name)
+        if VECTOR_SUPPORT:
+            self.model = SentenceTransformer(self.model_name)
+        else:  # pragma: no cover - fallback mode
+            self.model = None
         self.chunks: List[str] = []
         self.index: faiss.Index | None = None
         self.reload()
@@ -157,7 +183,7 @@ class KnowledgeBase:
         for folder in self.folders:
             chunks.extend(_load_folder(folder))
         self.chunks = chunks
-        if not chunks:
+        if not VECTOR_SUPPORT or not chunks or self.model is None:
             self.index = None
             return
         embeddings = self.model.encode(
@@ -175,23 +201,37 @@ class KnowledgeBase:
         top_k: int = 5,
     ) -> List[str]:
         """Return up to *top_k* relevant paragraphs for *query*."""
-        if self.index is None or not self.chunks:
+        if not self.chunks:
             return []
-        if threshold is None:
+
+        def _env_threshold() -> float:
             env = os.getenv("RAG_THRESHOLD")
             try:
-                threshold = float(env) if env is not None else 0.7
+                return float(env) if env is not None else 0.7
             except ValueError:  # pragma: no cover - environment may be invalid
-                threshold = 0.7
-        query_vec = self.model.encode(
-            [query], show_progress_bar=False, normalize_embeddings=True
-        )
-        scores, idx = self.index.search(query_vec.astype("float32"), top_k)
-        results = []
-        for score, i in zip(scores[0], idx[0]):
-            if score >= threshold:
-                results.append(self.chunks[i])
-        return results
+                return 0.7
+
+        if VECTOR_SUPPORT and self.index is not None and self.model is not None:
+            if threshold is None:
+                threshold = _env_threshold()
+            query_vec = self.model.encode(
+                [query], show_progress_bar=False, normalize_embeddings=True
+            )
+            scores, idx = self.index.search(query_vec.astype("float32"), top_k)
+            results = []
+            for score, i in zip(scores[0], idx[0]):
+                if score >= threshold:
+                    results.append(self.chunks[i])
+            return results
+
+        # Fallback string matching
+        threshold = _env_threshold()
+        scored = [
+            (_similarity(query, chunk), chunk) for chunk in self.chunks
+        ]
+        scored = [c for c in scored if c[0] >= threshold]
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [c[1] for c in scored[:top_k]]
 
 
 # ---------------------------------------------------------------------------
@@ -211,19 +251,37 @@ def _get_default_kb() -> KnowledgeBase:
 
 def search_knowledge(query: str, knowledge_chunks: List[str], threshold: float = 0.7) -> List[str]:
     """Search a list of paragraphs without creating a persistent instance."""
-    if not VECTOR_SUPPORT:
-        raise ImportError("sentence-transformers and faiss are required")
-    model = SentenceTransformer(os.getenv("RAG_MODEL", "paraphrase-multilingual-MiniLM-L12-v2"))
-    embeddings = model.encode(knowledge_chunks, show_progress_bar=False, normalize_embeddings=True)
-    index = faiss.IndexFlatIP(embeddings.shape[1])
-    index.add(embeddings.astype("float32"))
-    q_vec = model.encode([query], show_progress_bar=False, normalize_embeddings=True)
-    scores, idx = index.search(q_vec.astype("float32"), min(5, len(knowledge_chunks)))
-    results = []
-    for score, i in zip(scores[0], idx[0]):
-        if score >= threshold:
-            results.append(knowledge_chunks[i])
-    return results
+    if VECTOR_SUPPORT:
+        model = SentenceTransformer(
+            os.getenv("RAG_MODEL", "paraphrase-multilingual-MiniLM-L12-v2")
+        )
+        embeddings = model.encode(
+            knowledge_chunks, show_progress_bar=False, normalize_embeddings=True
+        )
+        index = faiss.IndexFlatIP(embeddings.shape[1])
+        index.add(embeddings.astype("float32"))
+        q_vec = model.encode(
+            [query], show_progress_bar=False, normalize_embeddings=True
+        )
+        scores, idx = index.search(
+            q_vec.astype("float32"), min(5, len(knowledge_chunks))
+        )
+        results = []
+        for score, i in zip(scores[0], idx[0]):
+            if score >= threshold:
+                results.append(knowledge_chunks[i])
+        return results
+
+    # Fallback string matching ignoring the threshold argument
+    env = os.getenv("RAG_THRESHOLD")
+    try:
+        thr = float(env) if env is not None else 0.7
+    except ValueError:  # pragma: no cover - environment may be invalid
+        thr = 0.7
+    scored = [(_similarity(query, c), c) for c in knowledge_chunks]
+    scored = [c for c in scored if c[0] >= thr]
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [c[1] for c in scored]
 
 
 def get_relevant_chunks(query: str, threshold: float = 0.7, top_k: int = 5) -> List[str]:
