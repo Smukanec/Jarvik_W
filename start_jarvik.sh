@@ -36,9 +36,21 @@ for cmd in ollama python3 curl; do
   fi
 done
 
-# Potřebujeme také 'ss' nebo 'nc' pro kontrolu běžících portů
-if ! command -v ss >/dev/null 2>&1 && ! command -v nc >/dev/null 2>&1; then
-  echo -e "${RED}❌ Chybí příkazy 'ss' i 'nc'. Nainstalujte balíček iproute2 nebo netcat.${NC}"
+# Potřebujeme také 'ss' nebo 'nc' (případně BusyBox) pro kontrolu běžících portů
+SS_CMD=""
+NC_CMD=""
+if command -v ss >/dev/null 2>&1; then
+  SS_CMD="ss"
+elif command -v busybox >/dev/null 2>&1; then
+  SS_CMD="busybox ss"
+fi
+if command -v nc >/dev/null 2>&1; then
+  NC_CMD="nc"
+elif command -v busybox >/dev/null 2>&1; then
+  NC_CMD="busybox nc"
+fi
+if [ -z "$SS_CMD" ] && [ -z "$NC_CMD" ]; then
+  echo -e "${RED}❌ Chybí příkazy 'ss' i 'nc'. Nainstalujte balíček iproute2, netcat nebo BusyBox pro Windows.${NC}"
   exit 1
 fi
 
@@ -117,7 +129,13 @@ fi
 echo -e "${GREEN}🌐 Spouštím Flask server...${NC}"
 nohup python3 main.py > flask.log 2>&1 &
 sleep 2
-if ! (ss -tuln 2>/dev/null | grep -q ":$FLASK_PORT" || nc -z localhost $FLASK_PORT >/dev/null 2>&1); then
+PORT_OK=0
+if [ -n "$SS_CMD" ] && $SS_CMD -tuln 2>/dev/null | grep -q ":$FLASK_PORT"; then
+  PORT_OK=1
+elif [ -n "$NC_CMD" ] && $NC_CMD -z localhost $FLASK_PORT >/dev/null 2>&1; then
+  PORT_OK=1
+fi
+if [ "$PORT_OK" -ne 1 ]; then
   echo -e "${RED}❌ Flask se nespustil, zkontrolujte flask.log${NC}"
   exit 1
 fi
