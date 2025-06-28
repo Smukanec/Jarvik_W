@@ -6,7 +6,7 @@ pdfplumber
 python-docx
 fpdf
 filelock
-duckduckgo-search==0.8
+duckduckgo-search==8.0.4
 beautifulsoup4
 sentence-transformers
 faiss-cpu
