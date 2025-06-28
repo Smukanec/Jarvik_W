@@ -21,10 +21,10 @@ Citlivost vyhledávání ve znalostech můžete upravit proměnnou `RAG_THRESHOL
    ```
 
 2. Po skončení instalace zkontrolujte, že je k dispozici balíček `duckduckgo-search`
-   ve verzi 0.8 nebo novější. Pokud chybí, doinstalujte jej v aktivovaném
+   ve verzi 8.0.4 nebo novější. Pokud chybí, doinstalujte jej v aktivovaném
    virtuálním prostředí příkazem:
    ```bash
-   pip install -U duckduckgo-search==0.8
+    pip install -U duckduckgo-search==8.0.4
    ```
 
 3. Po dokončení instalace načtěte aliasy usnadňující práci se skripty:
