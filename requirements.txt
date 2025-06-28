@@ -5,4 +5,6 @@ PyPDF2
 python-docx
 fpdf
 filelock
+duckduckgo-search
+beautifulsoup4
 

@@ -11,20 +11,32 @@ if ! command -v ollama >/dev/null 2>&1; then
   exit 1
 fi
 
-# Start Ollama if not running
-if ! pgrep -f "ollama serve" > /dev/null; then
-  echo -e "${GREEN}🚀 Spouštím Ollama...${NC}"
-  nohup ollama serve > ollama.log 2>&1 &
-  for i in {1..10}; do
-    if curl -s ${OLLAMA_URL:-http://localhost:11434}/api/tags >/dev/null 2>&1; then
-      break
-    fi
-    sleep 1
-  done
-  if ! curl -s ${OLLAMA_URL:-http://localhost:11434}/api/tags >/dev/null 2>&1; then
-    echo -e "${RED}❌ Ollama se nespustila, zkontrolujte ollama.log${NC}"
-    exit 1
-  fi
+# Rozpoznat vzdálenou Ollamu
+OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
+if [[ $OLLAMA_URL == http://localhost* ]] || [[ $OLLAMA_URL == http://127.* ]] || [[ $OLLAMA_URL == https://localhost* ]]; then
+  REMOTE_OLLAMA=0
 else
-  echo -e "${GREEN}✅ Ollama již běží${NC}"
+  REMOTE_OLLAMA=1
+  export OLLAMA_HOST=${OLLAMA_URL#*://}
+fi
+
+# Start Ollama pouze lokálně
+if [ "$REMOTE_OLLAMA" -eq 0 ]; then
+  if ! pgrep -f "ollama serve" > /dev/null; then
+    echo -e "${GREEN}🚀 Spouštím Ollama...${NC}"
+    nohup ollama serve > ollama.log 2>&1 &
+  else
+    echo -e "${GREEN}✅ Ollama již běží${NC}"
+  fi
+fi
+
+for i in {1..10}; do
+  if curl -s ${OLLAMA_URL}/api/tags >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+if ! curl -s ${OLLAMA_URL}/api/tags >/dev/null 2>&1; then
+  echo -e "${RED}❌ Nelze se připojit k ${OLLAMA_URL}${NC}"
+  exit 1
 fi

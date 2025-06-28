@@ -165,3 +165,51 @@ def test_per_user_knowledge_folders(client):
     assert main.PUBLIC_KNOWLEDGE_FOLDER in kb.folder[0]
     assert os.path.join(main.PUBLIC_KNOWLEDGE_FOLDER, "private") in kb.folder[1]
 
+
+def test_ask_web_endpoint(client, monkeypatch):
+    import main
+    monkeypatch.setattr(main, "search_and_scrape", lambda q: "web")
+    res = client.post("/ask_web", json={"message": "hi"}, headers=_auth())
+    assert res.status_code == 200
+    assert res.get_json()["response"] == "dummy"
+
+
+def test_memory_add(client):
+    import main
+    res = client.post(
+        "/memory/add",
+        json={"user": "q", "jarvik": "a"},
+        headers=_auth(),
+    )
+    assert res.status_code == 200
+    assert {"user": "q", "jarvik": "a"} in main.memory_caches["bob"]
+
+
+def test_knowledge_reload(client, monkeypatch):
+    import main
+    called = []
+
+    def fake_reload():
+        called.append(True)
+
+    main.knowledge.reload = fake_reload
+    res = client.post("/knowledge/reload", headers=_auth())
+    assert res.status_code == 200
+    assert called
+
+
+def test_model_switch(client, monkeypatch):
+    import main
+    called = []
+
+    def fake_popen(args):
+        called.append(args)
+        class D:
+            pass
+        return D()
+
+    monkeypatch.setattr(main.subprocess, "Popen", fake_popen)
+    res = client.post("/model", json={"model": "foo"}, headers=_auth())
+    assert res.status_code == 200
+    assert called
+
