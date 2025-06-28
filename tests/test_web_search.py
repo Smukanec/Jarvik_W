@@ -9,8 +9,16 @@ from tools import web_search
 
 
 def test_search_and_scrape(monkeypatch):
-    def fake_ddg(q, max_results=1):
-        return [{"href": "http://example.com"}]
+    class DummyDDGS:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            pass
+
+        def text(self, q, max_results=1, **kwargs):
+            for _ in range(max_results):
+                yield {"href": "http://example.com"}
 
     class Resp:
         text = "<html><body>Hello</body></html>"
@@ -18,7 +26,7 @@ def test_search_and_scrape(monkeypatch):
     def fake_get(url, timeout=5, headers=None):
         return Resp()
 
-    monkeypatch.setattr(web_search, "ddg", fake_ddg)
+    monkeypatch.setattr(web_search, "DDGS", DummyDDGS)
     monkeypatch.setattr(web_search.requests, "get", fake_get)
 
     out = web_search.search_and_scrape("hello")

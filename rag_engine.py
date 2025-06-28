@@ -22,13 +22,13 @@ def _check_optional_dependencies() -> None:
     """Set :data:`PDF_SUPPORT` and :data:`DOCX_SUPPORT` globals."""
     global PDF_SUPPORT, DOCX_SUPPORT
     try:  # pragma: no cover - availability is system dependent
-        import PyPDF2  # type: ignore
+        import PyPDF2  # type: ignore  # noqa: F401
 
         PDF_SUPPORT = True
     except Exception:
         PDF_SUPPORT = False
     try:  # pragma: no cover - availability is system dependent
-        import docx  # type: ignore
+        import docx  # type: ignore  # noqa: F401
 
         DOCX_SUPPORT = True
     except Exception:

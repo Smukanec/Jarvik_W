@@ -1,11 +1,12 @@
-from duckduckgo_search import ddg
+from duckduckgo_search import DDGS
 import requests
 from bs4 import BeautifulSoup
 
 
 def search_and_scrape(query: str, max_results: int = 1) -> str:
     """Return the first search result text for *query*."""
-    results = ddg(query, max_results=max_results)
+    with DDGS() as ddgs:
+        results = list(ddgs.text(query, max_results=max_results))
     if not results:
         return "\u26a0\ufe0f \u017d\u00e1dn\u00e9 v\u00fdsledky nenalezeny."
 
