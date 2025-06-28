@@ -215,7 +215,9 @@ def test_model_switch(client, monkeypatch):
 
 
 def test_feedback_endpoint(client):
-    import main, os, json
+    import main
+    import os
+    import json
 
     fb_path = os.path.join(main.MEMORY_DIR, "bob", "private.jsonl")
     if os.path.exists(fb_path):
@@ -237,7 +239,7 @@ def test_feedback_endpoint(client):
     assert res.status_code == 200
     assert os.path.exists(fb_path)
     with open(fb_path, "r", encoding="utf-8") as f:
-        lines = [json.loads(l) for l in f if l.strip()]
+        lines = [json.loads(line) for line in f if line.strip()]
     assert len(lines) == 1
     entry = lines[0]
     assert entry["type"] == "feedback"
@@ -249,7 +251,9 @@ def test_feedback_endpoint(client):
 
 def test_feedback_entry_written(client):
     """POSTing disagreeing feedback should create a private entry."""
-    import main, os, json
+    import main
+    import os
+    import json
 
     fb_path = os.path.join(main.MEMORY_DIR, "bob", "private.jsonl")
     if os.path.exists(fb_path):
@@ -263,7 +267,7 @@ def test_feedback_entry_written(client):
     assert res.status_code == 200
     assert os.path.exists(fb_path)
     with open(fb_path, "r", encoding="utf-8") as f:
-        data = [json.loads(l) for l in f if l.strip()]
+        data = [json.loads(line) for line in f if line.strip()]
     assert data == [
         {
             "type": "feedback",
@@ -276,7 +280,9 @@ def test_feedback_entry_written(client):
 
 
 def test_get_corrections_and_prompt_notes(client):
-    import main, os, json
+    import main
+    import os
+    import json
 
     fb_path = os.path.join(main.MEMORY_DIR, "bob", "private.jsonl")
     os.makedirs(os.path.dirname(fb_path), exist_ok=True)
@@ -296,7 +302,11 @@ def test_get_corrections_and_prompt_notes(client):
 
 def test_prompt_notes_with_mocked_file_and_similarity(client, monkeypatch):
     """Corrections are appended to the prompt when similarity matches."""
-    import main, builtins, io, json, os
+    import main
+    import builtins
+    import io
+    import json
+    import os
 
     file_data = json.dumps({"original_question": "hi", "correction": "note"}) + "\n"
     open_calls = []
