@@ -586,6 +586,35 @@ def index():
 def static_files(path):
     return app.send_static_file(path)
 
+
+@app.route("/feedback", methods=["POST"])
+@require_auth
+def feedback():
+    """Record user feedback when they disagree with an answer."""
+    data = request.get_json(silent=True) or {}
+    agree = data.get("agree")
+    question = data.get("question")
+    answer = data.get("answer")
+    correction = data.get("correction")
+
+    if not agree:
+        user: User | None = getattr(g, "current_user", None)
+        if user:
+            folder = os.path.join(MEMORY_DIR, user.nick)
+            os.makedirs(folder, exist_ok=True)
+            path = os.path.join(folder, "private.jsonl")
+            entry = {
+                "type": "feedback",
+                "agree": agree,
+                "question": question,
+                "answer": answer,
+                "correction": correction,
+            }
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry) + "\n")
+
+    return jsonify({"status": "ok"})
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=FLASK_PORT)
 
