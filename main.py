@@ -479,7 +479,14 @@ def ask_file():
                 pass
             return resp
 
-        resp = send_file(out_path, as_attachment=True, download_name=f"odpoved{ext}")
+        try:
+            resp = send_file(
+                out_path, as_attachment=True, download_name=f"odpoved{ext}"
+            )
+        except TypeError:  # Flask < 2.0 uses attachment_filename
+            resp = send_file(
+                out_path, as_attachment=True, attachment_filename=f"odpoved{ext}"
+            )
         resp.headers["X-Answer"] = output
         resp.headers["X-Debug"] = json.dumps(debug_log)
         return resp
