@@ -68,6 +68,12 @@
       font-weight: bold;
       margin-bottom: 0.5em;
     }
+    #feedback button {
+      margin-right: 0.5em;
+    }
+    #correction {
+      margin-top: 0.5em;
+    }
   </style>
 </head>
 <body>
@@ -115,6 +121,16 @@
       <h3>🤖 Odpověď</h3>
       <pre id="response"></pre>
       <a id="download" style="display:none" href="#">⬇️ Stáhnout odpověď</a>
+      <div id="feedback" style="display:none">
+        <button onclick="sendFeedback('good')">👍</button>
+        <button onclick="sendFeedback('bad')">👎</button>
+        <button onclick="showCorrection()">✏️ Opravit</button>
+        <div id="correction" style="display:none">
+          <textarea id="correction-text" rows="3" placeholder="Navržená odpověď…"></textarea>
+          <button onclick="submitCorrection()">Odeslat</button>
+        </div>
+        <pre id="feedback-status"></pre>
+      </div>
     </div>
     <div class="panel">
       <h3>🧪 Debug</h3>
@@ -324,8 +340,45 @@
 
       document.getElementById("message").value = "";
       fileInput.value = "";
+
       document.getElementById("status").textContent = `🟢 Připraven za ${elapsed} s.`;
       document.getElementById("activity").textContent = "";
+    }
+
+    function sendFeedback(vote) {
+      const body = {
+        vote,
+        response: document.getElementById('response').textContent
+      };
+      authFetch('/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(res => {
+        document.getElementById('feedback-status').textContent = res.ok ? '✅ Díky za zpětnou vazbu' : '❌ Chyba při odesílání';
+      });
+    }
+
+    function showCorrection() {
+      document.getElementById('correction').style.display = 'block';
+    }
+
+    function submitCorrection() {
+      const text = document.getElementById('correction-text').value.trim();
+      if (!text) return;
+      const body = {
+        correction: text,
+        response: document.getElementById('response').textContent
+      };
+      authFetch('/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(res => {
+        document.getElementById('feedback-status').textContent = res.ok ? '✅ Díky za zpětnou vazbu' : '❌ Chyba při odesílání';
+      });
+      document.getElementById('correction-text').value = '';
+      document.getElementById('correction').style.display = 'none';
     }
 
     document.getElementById("message").addEventListener("keydown", function (e) {
