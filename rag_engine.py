@@ -6,8 +6,6 @@ import difflib
 from typing import List
 
 # Optional dependencies -------------------------------------------------------
-PDF_SUPPORT = False
-DOCX_SUPPORT = False
 VECTOR_SUPPORT = False
 
 try:  # pragma: no cover - environment specific
@@ -18,29 +16,9 @@ except Exception:  # pragma: no cover - missing packages
     VECTOR_SUPPORT = False
 
 
-def _check_optional_dependencies() -> None:
-    """Set :data:`PDF_SUPPORT` and :data:`DOCX_SUPPORT` globals."""
-    global PDF_SUPPORT, DOCX_SUPPORT
-    try:  # pragma: no cover - availability is system dependent
-        import PyPDF2  # type: ignore  # noqa: F401
-
-        PDF_SUPPORT = True
-    except Exception:
-        PDF_SUPPORT = False
-    try:  # pragma: no cover - availability is system dependent
-        import docx  # type: ignore  # noqa: F401
-
-        DOCX_SUPPORT = True
-    except Exception:
-        DOCX_SUPPORT = False
-
-
-_check_optional_dependencies()
 
 __all__ = [
     "load_txt_file",
-    "load_pdf_file",
-    "load_docx_file",
     "load_knowledge",
     "search_knowledge",
     "KnowledgeBase",
@@ -89,28 +67,6 @@ def load_txt_file(path: str) -> str:
         return f.read()
 
 
-def load_pdf_file(path: str) -> str:
-    if not PDF_SUPPORT:
-        raise ImportError("PyPDF2 is required to load PDF files")
-
-    import PyPDF2  # type: ignore
-
-    text = ""
-    with open(path, "rb") as f:
-        reader = PyPDF2.PdfReader(f)
-        for page in reader.pages:
-            text += page.extract_text() or ""
-    return text
-
-
-def load_docx_file(path: str) -> str:
-    if not DOCX_SUPPORT:
-        raise ImportError("python-docx is required to load DOCX files")
-
-    import docx  # type: ignore
-
-    doc = docx.Document(path)
-    return "\n".join(p.text for p in doc.paragraphs)
 
 
 def _split_paragraphs(text: str) -> List[str]:
@@ -121,33 +77,13 @@ def _split_paragraphs(text: str) -> List[str]:
 def _load_folder(folder: str) -> List[str]:
     """Return a list of non-empty knowledge paragraphs from *folder*."""
     chunks: List[str] = []
-    warned_pdf = False
-    warned_docx = False
-    for ext in ("*.txt", "*.pdf", "*.docx"):
-        if ext == "*.pdf" and not PDF_SUPPORT:
-            if not warned_pdf:
-                print("⚠️  PDF support disabled – install PyPDF2 to enable")
-                warned_pdf = True
-            continue
-        if ext == "*.docx" and not DOCX_SUPPORT:
-            if not warned_docx:
-                print("⚠️  DOCX support disabled – install python-docx to enable")
-                warned_docx = True
-            continue
-        for path in glob.glob(os.path.join(folder, ext)):
-            try:
-                if ext == "*.txt":
-                    content = load_txt_file(path)
-                elif ext == "*.pdf":
-                    content = load_pdf_file(path)
-                elif ext == "*.docx":
-                    content = load_docx_file(path)
-                else:  # pragma: no cover - not reachable
-                    continue
-                for para in _split_paragraphs(content):
-                    chunks.append(para)
-            except Exception as e:  # pragma: no cover - just log errors
-                print(f"❌ Nelze načíst {path}: {e}")
+    for path in glob.glob(os.path.join(folder, "*.md")):
+        try:
+            content = load_txt_file(path)
+            for para in _split_paragraphs(content):
+                chunks.append(para)
+        except Exception as e:  # pragma: no cover - just log errors
+            print(f"❌ Nelze načíst {path}: {e}")
     return chunks
 
 
@@ -294,7 +230,5 @@ def dependency_status() -> dict[str, bool]:
     """Return which optional dependencies are available."""
 
     return {
-        "pdf": PDF_SUPPORT,
-        "docx": DOCX_SUPPORT,
         "vector": VECTOR_SUPPORT,
     }

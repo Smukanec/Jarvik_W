@@ -8,32 +8,11 @@ from rag_engine import KnowledgeBase, load_knowledge, search_knowledge
 
 @pytest.fixture
 def knowledge_dir(tmp_path):
-    """Create a temporary knowledge base with TXT, PDF and DOCX files."""
+    """Create a temporary knowledge base with a Markdown file."""
     folder = tmp_path / "kb"
     folder.mkdir()
 
-    # Always create a TXT file
-    (folder / "info.txt").write_text("TXT knowledge", encoding="utf-8")
-
-    # Create a PDF file when the required packages are available
-    try:
-        from fpdf import FPDF
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(0, 10, "PDF knowledge")
-        pdf.output(str(folder / "info.pdf"))
-    except Exception:
-        pass
-
-    # Create a DOCX file when the required package is available
-    try:
-        from docx import Document
-        doc = Document()
-        doc.add_paragraph("DOCX knowledge")
-        doc.save(str(folder / "info.docx"))
-    except Exception:
-        pass
+    (folder / "info.md").write_text("Markdown knowledge", encoding="utf-8")
 
     return folder
 
@@ -66,31 +45,13 @@ def test_search_knowledge_punctuation_removed():
 def test_load_knowledge(knowledge_dir):
     chunks = load_knowledge(knowledge_dir)
 
-    assert "TXT knowledge" in chunks
-
-    if any(f.suffix == ".pdf" for f in knowledge_dir.iterdir()):
-        assert any("PDF knowledge" in c for c in chunks)
-
-    if any(f.suffix == ".docx" for f in knowledge_dir.iterdir()):
-        assert any("DOCX knowledge" in c for c in chunks)
-
-
-def test_load_knowledge_all_formats(knowledge_dir):
-    pytest.importorskip("PyPDF2")
-    pytest.importorskip("fpdf")
-    pytest.importorskip("docx")
-
-    chunks = load_knowledge(knowledge_dir)
-
-    assert any("PDF knowledge" in c for c in chunks)
-    assert any("DOCX knowledge" in c for c in chunks)
-
+    assert "Markdown knowledge" in chunks
 
 def test_knowledge_base_reload(knowledge_dir):
     kb = KnowledgeBase(str(knowledge_dir))
-    assert any("TXT knowledge" in c for c in kb.chunks)
+    assert any("Markdown knowledge" in c for c in kb.chunks)
 
-    extra = knowledge_dir / "extra.txt"
+    extra = knowledge_dir / "extra.md"
     extra.write_text("Extra", encoding="utf-8")
     kb.reload()
     assert any("Extra" in c for c in kb.chunks)
@@ -133,8 +94,8 @@ def test_knowledge_base_multiple_folders(tmp_path):
     folder2 = tmp_path / "kb2"
     folder1.mkdir()
     folder2.mkdir()
-    (folder1 / "a.txt").write_text("hello", encoding="utf-8")
-    (folder2 / "b.txt").write_text("world", encoding="utf-8")
+    (folder1 / "a.md").write_text("hello", encoding="utf-8")
+    (folder2 / "b.md").write_text("world", encoding="utf-8")
 
     kb = KnowledgeBase([str(folder1), str(folder2)])
 
@@ -151,7 +112,7 @@ def test_knowledge_base_dj_smuk_search(tmp_path):
         "make crowds dance. Despite the name similarity to some websites, DJ \u0160muk"
         " is a person, not an online platform."
     )
-    (folder / "dj_smuk_info.txt").write_text(text, encoding="utf-8")
+    (folder / "dj_smuk_info.md").write_text(text, encoding="utf-8")
 
     kb = KnowledgeBase(str(folder))
 

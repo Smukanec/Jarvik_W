@@ -1,10 +1,7 @@
 from flask import Flask, request, jsonify, send_file, after_this_request, g
 from rag_engine import (
     KnowledgeBase,
-    dependency_status,
     load_txt_file,
-    load_pdf_file,
-    load_docx_file,
     _strip_diacritics,
 )
 import difflib
@@ -112,11 +109,6 @@ PUBLIC_KNOWLEDGE_FOLDER = os.path.join(BASE_DIR, "knowledge")
 knowledge = KnowledgeBase(PUBLIC_KNOWLEDGE_FOLDER)
 user_knowledge: dict[str, KnowledgeBase] = {}
 print("✅ Znalosti načteny.")
-deps = dependency_status()
-if not deps["pdf"]:
-    print("⚠️  PDF soubory se nenačtou – nainstalujte balíček PyPDF2")
-if not deps["docx"]:
-    print("⚠️  DOCX soubory se nenačtou – nainstalujte balíček python-docx")
 
 
 def get_knowledge_base(user: User | None) -> KnowledgeBase:
@@ -418,12 +410,8 @@ def ask_file():
             uploaded.save(tmp.name)
             tmp_path = tmp.name
         try:
-            if ext == ".txt":
+            if ext == ".md":
                 file_text = load_txt_file(tmp_path)
-            elif ext == ".pdf":
-                file_text = load_pdf_file(tmp_path)
-            elif ext == ".docx":
-                file_text = load_docx_file(tmp_path)
             else:
                 debug_log.append(f"Nepodporovaný typ souboru: {uploaded.filename}")
         except Exception as e:
@@ -491,27 +479,12 @@ def ask_file():
     target_folder = user.nick if user else DEFAULT_MEMORY_FOLDER
     append_to_memory(message, output, folder=target_folder)
 
-    if ext in {".txt", ".pdf", ".docx"}:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp_out:
+    if ext == ".md":
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".md") as tmp_out:
             out_path = tmp_out.name
         try:
-            if ext == ".txt":
-                with open(out_path, "w", encoding="utf-8") as f:
-                    f.write(output)
-            elif ext == ".docx":
-                from docx import Document
-                doc = Document()
-                doc.add_paragraph(output)
-                doc.save(out_path)
-            elif ext == ".pdf":
-                from fpdf import FPDF
-                pdf = FPDF()
-                pdf.add_page()
-                pdf.set_auto_page_break(auto=True, margin=15)
-                pdf.set_font("Arial", size=12)
-                for line in output.split("\n"):
-                    pdf.cell(0, 10, txt=line, ln=1)
-                pdf.output(out_path)
+            with open(out_path, "w", encoding="utf-8") as f:
+                f.write(output)
         except Exception as e:
             debug_log.append(f"Chyba při vytváření souboru: {e}")
             os.unlink(out_path)
@@ -589,11 +562,6 @@ def knowledge_reload():
     folders = [user.nick] + user.memory_folders if user else None
     reload_memory(folders)
     print("✅ Znalosti načteny.")
-    deps = dependency_status()
-    if not deps["pdf"]:
-        print("⚠️  PDF soubory se nenačtou – nainstalujte balíček PyPDF2")
-    if not deps["docx"]:
-        print("⚠️  DOCX soubory se nenačtou – nainstalujte balíček python-docx")
     return jsonify({"status": "reloaded", "chunks": len(kb.chunks)})
 
 
