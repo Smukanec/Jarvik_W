@@ -21,7 +21,6 @@ __all__ = [
     "search_knowledge",
     "KnowledgeBase",
     "get_relevant_chunks",
-    "dependency_status",
     "_strip_diacritics",
 ]
 
@@ -225,7 +224,3 @@ def get_relevant_chunks(query: str, threshold: float = 0.7, top_k: int = 5) -> L
     return kb.search(query, threshold=threshold, top_k=top_k)
 
 
-def dependency_status() -> dict[str, bool]:
-    """Return which optional dependencies are available."""
-
-    return {"vector": VECTOR_SUPPORT}
