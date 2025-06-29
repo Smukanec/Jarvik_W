@@ -53,11 +53,9 @@ This will append alias commands such as `jarvik-start`, `jarvik-status`,
 alias launches the default Gemma 2B model.
 
 Knowledge files are loaded from the `knowledge/` folder at startup. Jarvik uses
-the `KnowledgeBase` class from `rag_engine.py`, which reads all `.txt`, `.pdf`
-and `.docx` files, splits them into paragraphs and indexes them with FAISS.
-PDF and DOCX support requires the optional packages `PyPDF2` and `python-docx`
-while vector search relies on `sentence-transformers` and `faiss-cpu` listed in
-`requirements.txt`.
+the `KnowledgeBase` class from `rag_engine.py`, which reads all `.md` files,
+splits them into paragraphs and indexes them with FAISS. Vector search relies
+on `sentence-transformers` and `faiss-cpu` listed in `requirements.txt`.
 
 ### Folder layout and per-user data
 
@@ -73,14 +71,13 @@ environment variable to a floating point value.
 
 ### Text-only mode
 
-If you only work with plain text files you can simplify Jarvik:
+Jarvik now works exclusively with Markdown files.
 
-1. Edit `static/index.html` so the file input uses `accept=".txt"`.
-2. Remove the `.pdf` and `.docx` branches from the `/ask_file` handler in
-   `main.py`.
+1. Ensure `static/index.html` uses `accept=".md"`.
+2. The `/ask_file` handler in `main.py` loads uploaded Markdown with
+   `load_txt_file` and saves replies as `.md` files.
 
-After these changes Jarvik will only process TXT files and you may remove the
-`PyPDF2` and `python-docx` packages from your environment.
+PDF and DOCX dependencies are no longer required.
 
 ## Starting Jarvik
 
