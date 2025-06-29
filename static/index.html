@@ -296,10 +296,19 @@
         formData.append("file", file);
       }
 
-      const res = await authFetch("/ask_file", {
-        method: "POST",
-        body: formData
-      });
+      let res;
+      try {
+        res = await authFetch("/ask_file", {
+          method: "POST",
+          body: formData
+        });
+      } catch (e) {
+        document.getElementById("response").textContent =
+          "❌ Chyba při odesílání";
+        document.getElementById("download").style.display = "none";
+        document.getElementById('feedback').style.display = 'block';
+        return;
+      }
 
       const contentType = res.headers.get("Content-Type") || "";
       const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
