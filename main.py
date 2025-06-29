@@ -18,7 +18,6 @@ import tempfile
 import subprocess
 from filelock import FileLock
 import datetime
-import requests
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
