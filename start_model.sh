@@ -7,7 +7,7 @@ cd "$(dirname "$0")" || exit
 
 # Default model name can be overridden via MODEL_NAME
 MODEL_NAME=${MODEL_NAME:-"gemma:2b"}
-MODEL_LOG="${MODEL_NAME}.log"
+MODEL_LOG="${MODEL_NAME//:/_}.log"
 # Optional local .gguf file to register as MODEL_NAME when not present
 # Set LOCAL_MODEL_FILE to the path of your .gguf file
 

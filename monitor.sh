@@ -15,11 +15,11 @@ get_active_model() {
 }
 
 MODEL="$(get_active_model)"
-MODEL_LOG="${MODEL}.log"
+MODEL_LOG="${MODEL//:/_}.log"
 
 while true; do
   MODEL="$(get_active_model)"
-  MODEL_LOG="${MODEL}.log"
+  MODEL_LOG="${MODEL//:/_}.log"
   clear
   echo "===== Stav Jarvika ====="
   bash status.sh

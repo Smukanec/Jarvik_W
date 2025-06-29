@@ -2,6 +2,7 @@
 
 FLASK_PORT=${FLASK_PORT:-8010}
 MODEL_NAME=${MODEL_NAME:-"gemma:2b"}
+MODEL_LOG="${MODEL_NAME//:/_}.log"
 
 GREEN="\033[1;32m"
 RED="\033[1;31m"
@@ -47,7 +48,7 @@ check_ollama() {
 check_model() {
   if ! curl -s http://localhost:11434/api/tags | grep -q "$MODEL_NAME"; then
     echo -e "${RED}❌ Model $MODEL_NAME neběží. Restartuji...${NC}"
-    nohup ollama run "$MODEL_NAME" > "${MODEL_NAME}.log" 2>&1 &
+    nohup ollama run "$MODEL_NAME" > "$MODEL_LOG" 2>&1 &
   fi
 }
 
