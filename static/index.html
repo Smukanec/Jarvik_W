@@ -363,7 +363,13 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       }).then(res => {
-        document.getElementById('feedback-status').textContent = res.ok ? '✅ Díky za zpětnou vazbu' : '❌ Chyba při odesílání';
+        let msg;
+        if (res.status === 401) {
+          msg = '❌ Nepřihlášen – přihlaste se';
+        } else {
+          msg = res.ok ? '✅ Díky za zpětnou vazbu' : '❌ Chyba při odesílání';
+        }
+        document.getElementById('feedback-status').textContent = msg;
       });
     }
 
@@ -383,7 +389,13 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       }).then(res => {
-        document.getElementById('feedback-status').textContent = res.ok ? '✅ Díky za zpětnou vazbu' : '❌ Chyba při odesílání';
+        let msg;
+        if (res.status === 401) {
+          msg = '❌ Nepřihlášen – přihlaste se';
+        } else {
+          msg = res.ok ? '✅ Díky za zpětnou vazbu' : '❌ Chyba při odesílání';
+        }
+        document.getElementById('feedback-status').textContent = msg;
       });
       document.getElementById('correction-text').value = '';
       document.getElementById('correction').style.display = 'none';
