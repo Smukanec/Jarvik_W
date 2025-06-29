@@ -18,4 +18,9 @@ pkill -f "ollama run" 2>/dev/null
 pkill -f "ollama serve" 2>/dev/null
 sleep 2
 
-MODEL_NAME="$NEW_MODEL" bash "$DIR/start_jarvik.sh"
+if [ "$NEW_MODEL" = "api" ]; then
+  MODEL_MODE="api"
+else
+  MODEL_MODE="local"
+fi
+MODEL_NAME="$NEW_MODEL" MODEL_MODE="$MODEL_MODE" bash "$DIR/start_jarvik.sh"
