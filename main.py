@@ -18,6 +18,7 @@ import tempfile
 import subprocess
 from filelock import FileLock
 import datetime
+import requests
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
@@ -41,7 +42,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # ---------------------------------------------------------------------------
 # Helper to call the local LLM via Ollama
 # ---------------------------------------------------------------------------
-import requests
 
 
 def generate_response_with_context(context: str, prompt: str) -> str:
