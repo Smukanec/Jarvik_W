@@ -43,6 +43,9 @@
       border-radius: 8px;
       margin-top: 1em;
       color: #c8f6c8;
+      white-space: pre-wrap;
+      word-break: break-word;
+      text-align: left;
     }
     #panels {
       display: flex;
@@ -106,6 +109,8 @@
 
   <pre id="token-display"></pre>
   <button onclick="copyToken()">Copy token</button>
+
+  <p id="intro">Napiš dotaz nebo přilož soubor a klikni na <strong>Odeslat</strong>.</p>
 
   <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea><br>
   <input type="file" id="file" accept=".txt,.pdf,.docx"><br>
@@ -309,6 +314,7 @@
         }
         document.getElementById("response").textContent = `❌ ${errText}`;
         document.getElementById("download").style.display = "none";
+        document.getElementById('feedback').style.display = 'block';
         conversationLog += `[${timestamp}] 👤 ${msg}\n[${timestamp}] ❌ ${errText}\n\n`;
       } else if (contentType.includes("application/json")) {
         const data = await res.json();
@@ -316,6 +322,7 @@
         document.getElementById("debug").textContent = data.debug ? data.debug.join("\n") : "(žádný debug)";
         conversationLog += `[${timestamp}] 👤 ${msg}\n[${timestamp}] 🤖 ${data.response}\n\n`;
         document.getElementById("download").style.display = "none";
+        document.getElementById('feedback').style.display = 'block';
       } else {
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
@@ -325,6 +332,7 @@
         document.getElementById("response").textContent = answer || "❌ Chyba odpovědi";
         document.getElementById("debug").textContent = debugData.length ? debugData.join("\n") : "(žádný debug)";
         conversationLog += `[${timestamp}] 👤 ${msg}\n[${timestamp}] 🤖 ${answer}\n\n`;
+        document.getElementById('feedback').style.display = 'block';
         const disposition = res.headers.get("Content-Disposition") || "";
         let filename = "response";
         const m = disposition.match(/filename="?([^";]+)"?/);
