@@ -103,6 +103,7 @@
     <option value="gemma:2b">Gemma 2B</option>
     <option value="mistral:7b-Q4_K_M">Mistral 7B</option>
     <option value="jarvik-q4">Jarvik Q4</option>
+    <option value="api">Externí API</option>
   </select>
   <button onclick="switchModel()">Switch model</button>
   <pre id="model-status"></pre>
@@ -163,7 +164,8 @@
       'deepseek-coder': 'Deepseek Coder',
       'gemma:2b': 'Gemma 2B',
       'mistral:7b-Q4_K_M': 'Mistral 7B',
-      'jarvik-q4': 'Jarvik Q4'
+      'jarvik-q4': 'Jarvik Q4',
+      'api': 'Externí API'
     };
 
     let token = localStorage.getItem('token') || '';

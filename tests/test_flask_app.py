@@ -108,7 +108,7 @@ def test_ask_openai(client):
     headers["X-API-Key"] = "key"
     res = client.post("/ask", json={"message": "hi"}, headers=headers)
     assert res.status_code == 200
-    assert main._post_calls[-1][0].startswith("https://api.openai.com")
+    assert main._post_calls[-1][0] == main.API_URL
 
 
 def test_memory_search(client):

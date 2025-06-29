@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, send_file, after_this_request, g
 from rag_engine import (
     KnowledgeBase,
-    dependency_status,
     load_txt_file,
     _strip_diacritics,
 )
@@ -23,8 +22,36 @@ MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
 FLASK_PORT = int(os.getenv("FLASK_PORT", 8010))
 # Base URL for the Ollama server
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-# Model for OpenAI fallback
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+
+# API mode configuration
+MODEL_MODE = os.getenv("MODEL_MODE", "local")
+API_URL = os.getenv("API_URL", "https://api.openai.com/v1/chat/completions")
+API_MODEL = os.getenv("API_MODEL", os.getenv("OPENAI_MODEL", "gpt-3.5-turbo"))
+API_KEY = os.getenv("API_KEY")
+OPENAI_MODEL = API_MODEL  # backward compatibility
+
+
+def call_api(prompt: str, key: str | None = None) -> str:
+    """Send *prompt* to an external API and return the response."""
+    import requests
+
+    headers = {}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+
+    resp = requests.post(
+        API_URL,
+        headers=headers,
+        json={"model": API_MODEL, "messages": [{"role": "user", "content": prompt}]},
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    if isinstance(data, dict):
+        if "choices" in data:
+            return data["choices"][0]["message"]["content"].strip()
+        if "response" in data:
+            return data.get("response", "").strip()
+    return ""
 
 # Threshold for knowledge base search
 threshold_env = os.getenv("RAG_THRESHOLD")
@@ -271,6 +298,9 @@ def ask():
     data = data or {}
     message = data.get("message", "")
     api_key = request.headers.get("X-API-Key") or data.get("api_key")
+    if not api_key and MODEL_MODE == "api":
+        api_key = API_KEY
+    use_api = MODEL_MODE == "api" or api_key
 
     user: User | None = getattr(g, "current_user", None)
     folders = [user.nick] + user.memory_folders if user else None
@@ -300,17 +330,8 @@ def ask():
 
     try:
         import requests
-        if api_key:
-            res = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}"},
-                json={
-                    "model": OPENAI_MODEL,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
-            )
-            res.raise_for_status()
-            output = res.json()["choices"][0]["message"]["content"].strip()
+        if use_api:
+            output = call_api(prompt, key=api_key)
         else:
             response = requests.post(
                 f"{OLLAMA_URL}/api/generate",
@@ -337,6 +358,9 @@ def ask_web():
     if not query:
         return jsonify({"error": "message required"}), 400
     api_key = request.headers.get("X-API-Key") or data.get("api_key")
+    if not api_key and MODEL_MODE == "api":
+        api_key = API_KEY
+    use_api = MODEL_MODE == "api" or api_key
 
     user: User | None = getattr(g, "current_user", None)
     folders = [user.nick] + user.memory_folders if user else None
@@ -369,14 +393,8 @@ def ask_web():
 
     try:
         import requests
-        if api_key:
-            res = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}"},
-                json={"model": OPENAI_MODEL, "messages": [{"role": "user", "content": prompt}]},
-            )
-            res.raise_for_status()
-            output = res.json()["choices"][0]["message"]["content"].strip()
+        if use_api:
+            output = call_api(prompt, key=api_key)
         else:
             response = requests.post(
                 f"{OLLAMA_URL}/api/generate",
@@ -401,6 +419,9 @@ def ask_file():
     debug_log = []
     message = request.form.get("message", "")
     api_key = request.headers.get("X-API-Key") or request.form.get("api_key")
+    if not api_key and MODEL_MODE == "api":
+        api_key = API_KEY
+    use_api = MODEL_MODE == "api" or api_key
 
     uploaded = request.files.get("file")
     file_text = ""
@@ -452,17 +473,8 @@ def ask_file():
 
     try:
         import requests
-        if api_key:
-            res = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}"},
-                json={
-                    "model": OPENAI_MODEL,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
-            )
-            res.raise_for_status()
-            output = res.json()["choices"][0]["message"]["content"].strip()
+        if use_api:
+            output = call_api(prompt, key=api_key)
         else:
             response = requests.post(
                 f"{OLLAMA_URL}/api/generate",

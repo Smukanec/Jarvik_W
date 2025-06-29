@@ -227,6 +227,21 @@ source venv/bin/activate && python main.py
 jarvik-flask
 ```
 
+### API mode
+
+Jarvik can forward prompts to an external API instead of running a local model.
+Set `MODEL_MODE=api` and specify the endpoint parameters:
+
+```bash
+MODEL_MODE=api \
+API_URL=https://api.openai.com/v1/chat/completions \
+API_MODEL=gpt-3.5-turbo \
+API_KEY=sk-... bash start_jarvik.sh
+```
+
+The start script skips starting Ollama in this mode. The `/ask` endpoints will
+send requests to `API_URL` using the provided key (or an `X-API-Key` header).
+
 ## Checking Status
 
 See which services are running using:
