@@ -39,22 +39,6 @@ except ValueError:
 # Set base directory relative to this file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ---------------------------------------------------------------------------
-# Helper to call the local LLM via Ollama
-# ---------------------------------------------------------------------------
-
-
-def generate_response_with_context(context: str, prompt: str) -> str:
-    """Return the model response for *prompt* with prepended *context*."""
-    full_prompt = f"{context}\n\n{prompt}"
-    res = requests.post(
-        f"{OLLAMA_URL}/api/generate",
-        json={"model": MODEL_NAME, "prompt": full_prompt, "stream": False},
-        timeout=10,
-    )
-    data = res.json()
-    return data.get("response", "")
-
 # --- Authentication setup -------------------------------------------------
 USERS_FILE = os.path.join(BASE_DIR, "users.json")
 users = load_users(USERS_FILE)
