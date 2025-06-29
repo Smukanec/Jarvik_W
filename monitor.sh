@@ -5,11 +5,21 @@
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR" || exit
 
-# Default model name if not provided
-MODEL_NAME=${MODEL_NAME:-"gemma:2b"}
-MODEL_LOG="${MODEL_NAME}.log"
+get_active_model() {
+  if command -v jq >/dev/null 2>&1; then
+    curl -s http://localhost:11434/api/tags | jq -r '.[0].name'
+  else
+    curl -s http://localhost:11434/api/tags |\
+      grep -o '"name":"[^"]*"' | head -n 1 | sed -e 's/"name":"//' -e 's/"$//'
+  fi
+}
+
+MODEL="$(get_active_model)"
+MODEL_LOG="${MODEL}.log"
 
 while true; do
+  MODEL="$(get_active_model)"
+  MODEL_LOG="${MODEL}.log"
   clear
   echo "===== Stav Jarvika ====="
   bash status.sh

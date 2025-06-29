@@ -288,8 +288,9 @@ To continuously watch Jarvik's state and recent logs, run:
 bash monitor.sh
 ```
 
-The script refreshes every two seconds and shows the last lines from
-`flask.log`, `<model>.log` and `ollama.log` produced by `start_jarvik.sh`.
+The script refreshes every two seconds, detects whichever model Ollama
+is currently serving and shows the last lines from `flask.log`,
+`<model>.log` and `ollama.log` produced by `start_jarvik.sh`.
 
 ## Automatic Restart
 
