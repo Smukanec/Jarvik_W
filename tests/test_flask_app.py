@@ -436,3 +436,24 @@ def test_knowledge_upload_records_description(client, monkeypatch, tmp_path):
     assert "Byl vložen znalostní soubor" in entry["jarvik"]
     assert "some info" in entry["jarvik"]
 
+
+def test_memory_delete_by_keyword(client, tmp_path):
+    import main
+    import json
+
+    path, _ = main._ensure_memory(main.DEFAULT_MEMORY_FOLDER)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"user": "remove", "jarvik": "x"}) + "\n")
+        f.write(json.dumps({"user": "keep", "jarvik": "y"}) + "\n")
+    main.reload_memory()
+
+    res = client.post(
+        "/memory/delete",
+        json={"keyword": "remove"},
+        headers=_auth(),
+    )
+    assert res.status_code == 200
+    assert "1" in res.get_json()["message"]
+    entries = main.load_memory()
+    assert all("remove" not in e["user"] for e in entries)
+

@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, send_file, after_this_request, g
 from werkzeug.utils import secure_filename
+from memory import vymazat_memory_range
 from rag_engine import (
     KnowledgeBase,
     load_txt_file,
@@ -596,6 +597,23 @@ def memory_search():
     if not query:
         return jsonify(memory_entries[-5:])
     return jsonify(search_memory(query, memory_entries))
+
+
+@app.route("/memory/delete", methods=["POST"])
+@require_auth
+def delete_memory_entries():
+    """Remove memory entries for the current user."""
+    data = request.get_json(silent=True) or {}
+    t_from = data.get("from") or data.get("od")
+    t_to = data.get("to") or data.get("do")
+    keyword = data.get("keyword") or data.get("hledat_podle")
+    user: User | None = getattr(g, "current_user", None)
+    folder = user.nick if user else DEFAULT_MEMORY_FOLDER
+    path, lock = _ensure_memory(folder)
+    with lock:
+        removed = vymazat_memory_range(path, od=t_from, do=t_to, hledat_podle=keyword)
+        memory_caches[folder] = _read_memory_file(folder)
+    return jsonify({"message": f"{removed} entries deleted"})
 
 @app.route("/knowledge/search")
 @require_auth
