@@ -380,3 +380,31 @@ def test_knowledge_upload(client, monkeypatch, tmp_path):
     assert called
     assert os.path.exists(os.path.join(tmp_path, "info.txt"))
 
+
+def test_knowledge_upload_sanitizes_filename(client, monkeypatch, tmp_path):
+    import main
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+    called = []
+    main.knowledge.folder = str(tmp_path)
+
+    def fake_reload():
+        called.append(True)
+
+    main.knowledge.reload = fake_reload
+    data = {
+        "file": (io.BytesIO(b"hello"), "../evil.txt"),
+        "private": "0",
+    }
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    assert called
+    fname = res.get_json()["file"]
+    # ensure filename is sanitized and file saved inside target folder
+    assert os.path.sep not in fname
+    assert os.path.exists(os.path.join(tmp_path, fname))
+

@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_file, after_this_request, g
+from werkzeug.utils import secure_filename
 from rag_engine import (
     KnowledgeBase,
     load_txt_file,
@@ -632,8 +633,11 @@ def knowledge_upload():
     uploaded = request.files.get("file")
     if not uploaded or not uploaded.filename:
         return jsonify({"error": "file required"}), 400
+    filename = secure_filename(uploaded.filename)
+    if not filename:
+        return jsonify({"error": "invalid filename"}), 400
     private = request.form.get("private") in {"1", "true", "yes"}
-    ext = os.path.splitext(uploaded.filename)[1].lower()
+    ext = os.path.splitext(filename)[1].lower()
     with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
         uploaded.save(tmp.name)
         tmp_path = tmp.name
@@ -649,7 +653,7 @@ def knowledge_upload():
     if private and user:
         target = os.path.join(target, user.nick)
     os.makedirs(target, exist_ok=True)
-    base = os.path.splitext(uploaded.filename)[0]
+    base = os.path.splitext(filename)[0]
     name = f"{base}.txt"
     path = os.path.join(target, name)
     counter = 1
