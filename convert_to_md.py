@@ -1,7 +1,14 @@
 from pathlib import Path
 
-import pdfplumber
-from docx import Document
+try:
+    import pdfplumber
+except ImportError:  # pragma: no cover - simple import guard
+    pdfplumber = None
+
+try:
+    from docx import Document
+except ImportError:  # pragma: no cover - simple import guard
+    Document = None
 
 INPUT_DIR = Path("knowledge")
 OUTPUT_DIR = Path("knowledge_md")
@@ -26,6 +33,12 @@ def convert_txt_to_md(input_path: Path, output_path: Path) -> None:
 
 
 def convert_pdf_to_md(input_path: Path, output_path: Path) -> None:
+    if pdfplumber is None:
+        print(
+            "pdfplumber is required for PDF conversion. Install it with 'pip install pdfplumber'."
+        )
+        return
+
     md_lines = ["# " + input_path.stem.replace("_", " ").title(), ""]
     with pdfplumber.open(str(input_path)) as pdf:
         for i, page in enumerate(pdf.pages, start=1):
@@ -39,6 +52,12 @@ def convert_pdf_to_md(input_path: Path, output_path: Path) -> None:
 
 
 def convert_docx_to_md(input_path: Path, output_path: Path) -> None:
+    if Document is None:
+        print(
+            "python-docx is required for DOCX conversion. Install it with 'pip install python-docx'."
+        )
+        return
+
     doc = Document(str(input_path))
     md_lines = ["# " + input_path.stem.replace("_", " ").title(), ""]
     paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
@@ -54,11 +73,23 @@ def convert_docx_to_md(input_path: Path, output_path: Path) -> None:
 if __name__ == "__main__":
     for file in INPUT_DIR.iterdir():
         out_path = OUTPUT_DIR / f"{file.stem}.md"
-        if file.suffix.lower() == ".txt":
+        ext = file.suffix.lower()
+
+        if ext == ".txt":
             convert_txt_to_md(file, out_path)
-        elif file.suffix.lower() == ".pdf":
+        elif ext == ".pdf":
+            if pdfplumber is None:
+                print(
+                    f"Skipping {file.name}: install pdfplumber with 'pip install pdfplumber' to enable PDF conversion."
+                )
+                continue
             convert_pdf_to_md(file, out_path)
-        elif file.suffix.lower() == ".docx":
+        elif ext == ".docx":
+            if Document is None:
+                print(
+                    f"Skipping {file.name}: install python-docx with 'pip install python-docx' to enable DOCX conversion."
+                )
+                continue
             convert_docx_to_md(file, out_path)
         else:
             continue
