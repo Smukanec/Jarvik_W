@@ -154,6 +154,7 @@ Pokud už máte spuštěný model a potřebujete jen Flask server, spusťte nov�
 skript nebo příkaz ručně:
 
 ```bash
+# Skript automaticky ukončí předchozí Flask
 bash start_flask.sh
 # nebo ručně
 source venv/bin/activate && python main.py
