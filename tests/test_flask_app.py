@@ -139,11 +139,15 @@ def test_memory_search_with_invalid_line(client):
     import os
     import json
 
+    from datetime import datetime
     path = os.path.join(main.MEMORY_DIR, "public.jsonl")
+    ts = datetime.utcnow().isoformat()
     with open(path, "w", encoding="utf-8") as f:
-        f.write(json.dumps({"user": "ok", "jarvik": "good"}) + "\n")
+        f.write(json.dumps({"timestamp": ts, "role": "user", "message": "ok"}) + "\n")
+        f.write(json.dumps({"timestamp": ts, "role": "assistant", "message": "good"}) + "\n")
         f.write("{bad json}\n")
-        f.write(json.dumps({"user": "fine", "jarvik": "yes"}) + "\n")
+        f.write(json.dumps({"timestamp": ts, "role": "user", "message": "fine"}) + "\n")
+        f.write(json.dumps({"timestamp": ts, "role": "assistant", "message": "yes"}) + "\n")
 
     main.reload_memory()
 
@@ -456,4 +460,21 @@ def test_memory_delete_by_keyword(client, tmp_path):
     assert "1" in res.get_json()["message"]
     entries = main.load_memory()
     assert all("remove" not in e["user"] for e in entries)
+
+
+def test_read_memory_file_new_format(monkeypatch, tmp_path):
+    import main
+    import os
+    import json
+    from datetime import datetime
+
+    monkeypatch.setattr(main, "MEMORY_DIR", str(tmp_path))
+    path = os.path.join(main.MEMORY_DIR, "public.jsonl")
+    ts = datetime.utcnow().isoformat()
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"timestamp": ts, "role": "user", "message": "q"}) + "\n")
+        f.write(json.dumps({"timestamp": ts, "role": "assistant", "message": "a"}) + "\n")
+
+    entries = main._read_memory_file(main.DEFAULT_MEMORY_FOLDER)
+    assert entries == [{"user": "q", "jarvik": "a"}]
 

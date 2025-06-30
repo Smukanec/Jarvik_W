@@ -19,6 +19,7 @@ from filelock import FileLock
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from datetime import datetime
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
@@ -208,15 +209,15 @@ def _ensure_memory(folder: str) -> tuple[str, FileLock]:
     """Return the memory log path and lock for *folder*.
 
     The ``public`` folder maps to ``memory/public.jsonl`` while any other
-    name creates ``memory/<name>/log.jsonl``. This supports per-user logs
-    without breaking the existing public memory file.
+    name creates ``memory/<name>/private.jsonl``. This keeps user history
+    separate from the shared public memory.
     """
 
     if folder == DEFAULT_MEMORY_FOLDER:
         path = os.path.join(MEMORY_DIR, "public.jsonl")
         lock_key = DEFAULT_MEMORY_FOLDER
     else:
-        path = os.path.join(MEMORY_DIR, folder, "log.jsonl")
+        path = os.path.join(MEMORY_DIR, folder, "private.jsonl")
         lock_key = folder
 
     if lock_key not in memory_locks:
@@ -232,16 +233,32 @@ def _read_memory_file(folder: str) -> list[dict]:
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-            if MAX_MEMORY_ENTRIES:
-                lines = lines[-MAX_MEMORY_ENTRIES:]
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    entries.append(json.loads(line))
-                except json.JSONDecodeError:
-                    logging.warning("Skipping invalid memory line in %s: %s", path, line)
+        if MAX_MEMORY_ENTRIES:
+            lines = lines[-MAX_MEMORY_ENTRIES:]
+
+        pending_user: str | None = None
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                logging.warning("Skipping invalid memory line in %s: %s", path, line)
+                continue
+
+            if "role" in obj and "message" in obj:
+                role = obj.get("role")
+                msg = obj.get("message", "")
+                if role == "user":
+                    pending_user = msg
+                elif role == "assistant" and pending_user is not None:
+                    entries.append({"user": pending_user, "jarvik": msg})
+                    pending_user = None
+                # ignore assistant line without preceding user
+            elif "user" in obj and "jarvik" in obj:
+                entries.append({"user": obj.get("user", ""), "jarvik": obj.get("jarvik", "")})
+            # ignore unrelated objects (e.g. feedback)
     return entries
 
 
@@ -271,11 +288,16 @@ def append_to_memory(user_msg: str, ai_response: str, folder: str = DEFAULT_MEMO
     entry = {"user": user_msg, "jarvik": ai_response}
     path, lock = _ensure_memory(folder)
     cache = memory_caches.setdefault(folder, _read_memory_file(folder))
+    now_iso = datetime.utcnow().isoformat()
+    entry_user = {"timestamp": now_iso, "role": "user", "message": user_msg}
+    entry_assist = {"timestamp": now_iso, "role": "assistant", "message": ai_response}
     with lock:
         cache.append(entry)
         if MAX_MEMORY_ENTRIES and len(cache) > MAX_MEMORY_ENTRIES:
             cache[:] = cache[-MAX_MEMORY_ENTRIES:]
-        _flush_memory_locked(folder)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry_user) + "\n")
+            f.write(json.dumps(entry_assist) + "\n")
 
 
 def flush_memory(folders: list[str] | None = None) -> None:
@@ -291,7 +313,9 @@ def _flush_memory_locked(folder: str) -> None:
     lines = cache[-MAX_MEMORY_ENTRIES:] if MAX_MEMORY_ENTRIES else cache
     with open(path, "w", encoding="utf-8") as f:
         for item in lines:
-            f.write(json.dumps(item) + "\n")
+            now_iso = datetime.utcnow().isoformat()
+            f.write(json.dumps({"timestamp": now_iso, "role": "user", "message": item.get("user", "")}) + "\n")
+            f.write(json.dumps({"timestamp": now_iso, "role": "assistant", "message": item.get("jarvik", "")}) + "\n")
 
 
 @app.route("/login", methods=["POST"])
