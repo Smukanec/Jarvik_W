@@ -156,6 +156,7 @@
   <h3>➕ Přidat znalost</h3>
   <input type="file" id="knowledge-file"><br>
   <label><input type="checkbox" id="knowledge-private"> Soukromá</label><br>
+  <input id="knowledge-desc" placeholder="Popis souboru"><br>
   <button onclick="uploadKnowledge()">Nahrát</button>
   <pre id="knowledge-status"></pre>
 
@@ -425,8 +426,13 @@
       const formData = new FormData();
       formData.append('file', file);
       formData.append('private', document.getElementById('knowledge-private').checked ? '1' : '0');
+      const desc = document.getElementById('knowledge-desc').value.trim();
+      if (desc) formData.append('description', desc);
       const res = await authFetch('/knowledge/upload', { method: 'POST', body: formData });
       document.getElementById('knowledge-status').textContent = res.ok ? '✅ Uloženo' : '❌ Chyba';
+      if (res.ok) {
+        document.getElementById('knowledge-desc').value = '';
+      }
       fileInput.value = '';
     }
 
