@@ -6,6 +6,40 @@ cd "$DIR" || exit
 GREEN='\033[1;32m'
 NC='\033[0m'
 
+# Remove accidentally tracked files
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  changes=false
+
+  if git ls-files | grep -q '^venv/'; then
+    git rm --cached -r venv >/dev/null 2>&1 || true
+    changes=true
+  fi
+
+  memory_files=$(git ls-files 'memory/*.jsonl')
+  if [ -n "$memory_files" ]; then
+    echo "$memory_files" | xargs git rm --cached >/dev/null 2>&1 || true
+    changes=true
+  fi
+
+  log_files=$(git ls-files '*.log')
+  if [ -n "$log_files" ]; then
+    echo "$log_files" | xargs git rm --cached >/dev/null 2>&1 || true
+    changes=true
+  fi
+
+  for pattern in 'venv/' 'memory/*.jsonl' '*.log'; do
+    if [ ! -f .gitignore ] || ! grep -qxF "$pattern" .gitignore; then
+      echo "$pattern" >> .gitignore
+      changes=true
+    fi
+  done
+
+  if [ "$changes" = true ]; then
+    git add .gitignore >/dev/null 2>&1 || true
+    git commit -m "Automatická očista repozitáře (paměť, venv, logy)" >/dev/null 2>&1 || true
+  fi
+fi
+
 # Download latest version if possible
 if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if [ -n "$(git remote)" ]; then
