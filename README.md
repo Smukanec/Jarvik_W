@@ -71,13 +71,10 @@ environment variable to a floating point value.
 
 ### Text-only mode
 
-Jarvik now works exclusively with Markdown files.
-
-1. Ensure `static/index.html` uses `accept=".md"`.
-2. The `/ask_file` handler in `main.py` loads uploaded Markdown with
-   `load_txt_file` and saves replies as `.md` files.
-
-PDF and DOCX dependencies are no longer required.
+Jarvik processes Markdown files by default. The form in
+`static/index.html` accepts only `.md` uploads and the `/ask_file`
+endpoint loads them with `load_txt_file`, storing all replies as Markdown
+documents. Support for PDF and DOCX files has been dropped.
 
 ## Starting Jarvik
 
