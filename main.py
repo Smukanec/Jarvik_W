@@ -667,6 +667,8 @@ def knowledge_upload():
 
     kb = get_knowledge_base(user)
     kb.reload()
+    if not private:
+        knowledge.reload()
 
     folder = user.nick if user else DEFAULT_MEMORY_FOLDER
     msg = (
