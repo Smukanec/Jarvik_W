@@ -16,6 +16,7 @@ import subprocess
 from filelock import FileLock
 import logging
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
@@ -53,6 +54,32 @@ def call_api(prompt: str, key: str | None = None) -> str:
         if "response" in data:
             return data.get("response", "").strip()
     return ""
+
+
+def convert_file_to_txt(path: str) -> str:
+    ext = Path(path).suffix.lower()
+    if ext in {".txt", ".md"}:
+        return load_txt_file(path)
+    if ext == ".pdf":
+        try:
+            import pdfplumber
+        except Exception:
+            raise RuntimeError("pdfplumber required for PDF conversion")
+        lines = []
+        with pdfplumber.open(path) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text() or ""
+                lines.append(text.strip())
+        return "\n\n".join(lines)
+    if ext == ".docx":
+        try:
+            from docx import Document  # type: ignore
+        except Exception:
+            raise RuntimeError("python-docx required for DOCX conversion")
+        doc = Document(path)
+        paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+        return "\n\n".join(paragraphs)
+    raise RuntimeError(f"Unsupported file type: {ext}")
 
 # Threshold for knowledge base search
 threshold_env = os.getenv("RAG_THRESHOLD")
@@ -457,13 +484,10 @@ def ask_file():
             uploaded.save(tmp.name)
             tmp_path = tmp.name
         try:
-            if ext == ".md":
-                file_text = load_txt_file(tmp_path)
-            else:
-                debug_log.append(f"Nepodporovaný typ souboru: {uploaded.filename}")
-                ext = None
+            file_text = convert_file_to_txt(tmp_path)
         except Exception as e:
             debug_log.append(f"Chyba při čtení souboru: {e}")
+            ext = None
         finally:
             os.unlink(tmp_path)
 
@@ -515,7 +539,7 @@ def ask_file():
     target_folder = user.nick if user else DEFAULT_MEMORY_FOLDER
     append_to_memory(message, output, folder=target_folder)
 
-    if ext == ".md":
+    if ext == ".txt":
         with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp_out:
             out_path = tmp_out.name
         try:
@@ -599,6 +623,46 @@ def knowledge_reload():
     reload_memory(folders)
     print("✅ Znalosti načteny.")
     return jsonify({"status": "reloaded", "chunks": len(kb.chunks)})
+
+
+@app.route("/knowledge/upload", methods=["POST"])
+@require_auth
+def knowledge_upload():
+    user: User | None = getattr(g, "current_user", None)
+    uploaded = request.files.get("file")
+    if not uploaded or not uploaded.filename:
+        return jsonify({"error": "file required"}), 400
+    private = request.form.get("private") in {"1", "true", "yes"}
+    ext = os.path.splitext(uploaded.filename)[1].lower()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+        uploaded.save(tmp.name)
+        tmp_path = tmp.name
+    try:
+        text = convert_file_to_txt(tmp_path)
+    except Exception as e:
+        os.unlink(tmp_path)
+        return jsonify({"error": str(e)}), 400
+    finally:
+        os.unlink(tmp_path)
+
+    target = PUBLIC_KNOWLEDGE_FOLDER
+    if private and user:
+        target = os.path.join(target, user.nick)
+    os.makedirs(target, exist_ok=True)
+    base = os.path.splitext(uploaded.filename)[0]
+    name = f"{base}.txt"
+    path = os.path.join(target, name)
+    counter = 1
+    while os.path.exists(path):
+        name = f"{base}_{counter}.txt"
+        path = os.path.join(target, name)
+        counter += 1
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+    kb = get_knowledge_base(user)
+    kb.reload()
+    return jsonify({"status": "saved", "file": name})
 
 
 @app.route("/model", methods=["GET", "POST"])

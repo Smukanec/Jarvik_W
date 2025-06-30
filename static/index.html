@@ -114,7 +114,7 @@
   <p id="intro">Napiš dotaz nebo přilož soubor a klikni na <strong>Odeslat</strong>.</p>
 
   <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea><br>
-  <input type="file" id="file" accept=".md"><br>
+  <input type="file" id="file"><br>
   <button onclick="ask()">Odeslat</button>
   <pre id="activity"></pre>
 
@@ -152,6 +152,12 @@
   <h3>📊 Stav</h3>
   <pre id="status">🟢 Připraven.</pre>
   <pre id="duration"></pre>
+
+  <h3>➕ Přidat znalost</h3>
+  <input type="file" id="knowledge-file"><br>
+  <label><input type="checkbox" id="knowledge-private"> Soukromá</label><br>
+  <button onclick="uploadKnowledge()">Nahrát</button>
+  <pre id="knowledge-status"></pre>
 
   <script>
     const MODEL_NAMES = {
@@ -410,6 +416,18 @@
       });
       document.getElementById('correction-text').value = '';
       document.getElementById('correction').style.display = 'none';
+    }
+
+    async function uploadKnowledge() {
+      const fileInput = document.getElementById('knowledge-file');
+      const file = fileInput.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('private', document.getElementById('knowledge-private').checked ? '1' : '0');
+      const res = await authFetch('/knowledge/upload', { method: 'POST', body: formData });
+      document.getElementById('knowledge-status').textContent = res.ok ? '✅ Uloženo' : '❌ Chyba';
+      fileInput.value = '';
     }
 
     document.getElementById("message").addEventListener("keydown", function (e) {
