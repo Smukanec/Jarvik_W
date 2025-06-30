@@ -14,8 +14,8 @@ import os
 import tempfile
 import subprocess
 from filelock import FileLock
-import datetime
 import logging
+from logging.handlers import RotatingFileHandler
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
@@ -63,6 +63,28 @@ except ValueError:
 
 # Set base directory relative to this file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# --- Prompt logging setup -------------------------------------------------
+# Limit prompt log size and enable rotation
+MAX_PROMPT_LOG_BYTES = int(os.getenv("MAX_PROMPT_LOG_BYTES", str(1024 * 1024)))
+PROMPT_LOG_BACKUPS = int(os.getenv("PROMPT_LOG_BACKUPS", "3"))
+_prompt_log_path = os.path.join(BASE_DIR, "final_prompt.txt")
+_prompt_logger = logging.getLogger("prompt_log")
+_prompt_logger.setLevel(logging.INFO)
+_prompt_handler = RotatingFileHandler(
+    _prompt_log_path,
+    maxBytes=MAX_PROMPT_LOG_BYTES,
+    backupCount=PROMPT_LOG_BACKUPS,
+    encoding="utf-8",
+)
+_prompt_handler.setFormatter(logging.Formatter("%(asctime)s\n%(message)s"))
+_prompt_logger.addHandler(_prompt_handler)
+_prompt_logger.propagate = False
+
+
+def log_prompt(prompt: str) -> None:
+    """Write *prompt* to the rotating prompt log."""
+    _prompt_logger.info(prompt)
 
 # --- Authentication setup -------------------------------------------------
 USERS_FILE = os.path.join(BASE_DIR, "users.json")
@@ -332,10 +354,7 @@ def ask():
     if corrections:
         prompt += "\n" + "\n".join([f"Poznámka: {c}" for c in corrections])
 
-    log_path = os.path.join(BASE_DIR, "final_prompt.txt")
-    with open(log_path, "a", encoding="utf-8") as log_file:
-        ts = datetime.datetime.now().isoformat()
-        log_file.write(f"{ts}\n{prompt}\n")
+    log_prompt(prompt)
 
     try:
         import requests
@@ -395,10 +414,7 @@ def ask_web():
     if corrections:
         prompt += "\n" + "\n".join([f"Poznámka: {c}" for c in corrections])
 
-    log_path = os.path.join(BASE_DIR, "final_prompt.txt")
-    with open(log_path, "a", encoding="utf-8") as log_file:
-        ts = datetime.datetime.now().isoformat()
-        log_file.write(f"{ts}\n{prompt}\n")
+    log_prompt(prompt)
 
     try:
         import requests
@@ -475,10 +491,7 @@ def ask_file():
     if corrections:
         prompt += "\n" + "\n".join([f"Poznámka: {c}" for c in corrections])
 
-    log_path = os.path.join(BASE_DIR, "final_prompt.txt")
-    with open(log_path, "a", encoding="utf-8") as log_file:
-        ts = datetime.datetime.now().isoformat()
-        log_file.write(f"{ts}\n{prompt}\n")
+    log_prompt(prompt)
 
     try:
         import requests
