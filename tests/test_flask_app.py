@@ -133,6 +133,24 @@ def test_memory_search_diacritics(client):
     assert any("\u0160muk" in e["user"] for e in res.get_json())
 
 
+def test_memory_search_with_invalid_line(client):
+    import main
+    import os
+    import json
+
+    path = os.path.join(main.MEMORY_DIR, "public.jsonl")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"user": "ok", "jarvik": "good"}) + "\n")
+        f.write("{bad json}\n")
+        f.write(json.dumps({"user": "fine", "jarvik": "yes"}) + "\n")
+
+    main.reload_memory()
+
+    res = client.get("/memory/search", headers=_auth())
+    assert res.status_code == 200
+    assert len(res.get_json()) == 3
+
+
 def test_knowledge_search(client):
     res = client.get("/knowledge/search", query_string={"q": "test"}, headers=_auth())
     assert res.status_code == 200
