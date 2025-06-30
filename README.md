@@ -53,7 +53,8 @@ This will append alias commands such as `jarvik-start`, `jarvik-status`,
 alias launches the default Gemma 2B model.
 
 Knowledge files are loaded from the `knowledge/` folder at startup. Jarvik now
-loads only Markdown (`.md`) files by default. The `KnowledgeBase` class from
+loads only Markdown (`.md`) files by default. See `knowledge/sample.md` for a
+minimal example of the expected structure. The `KnowledgeBase` class from
 `rag_engine.py` reads these files, splits them into paragraphs and indexes them
 with FAISS. Vector search relies on `sentence-transformers` and `faiss-cpu`
 listed in `requirements.txt`. Convert existing PDFs or DOCX documents using
