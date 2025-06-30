@@ -57,7 +57,9 @@ loads only Markdown (`.md`) files by default. The `KnowledgeBase` class from
 `rag_engine.py` reads these files, splits them into paragraphs and indexes them
 with FAISS. Vector search relies on `sentence-transformers` and `faiss-cpu`
 listed in `requirements.txt`. Convert existing PDFs or DOCX documents using
-`convert_to_md.py`.
+`convert_to_md.py`. The script relies on the optional packages `pdfplumber`
+and `python-docx` for PDF and DOCX conversion, so install them manually if
+needed.
 
 ### Folder layout and per-user data
 
@@ -74,7 +76,8 @@ environment variable to a floating point value.
 ### Text-only mode
 
 Jarvik works exclusively with Markdown files. Convert any PDF or DOCX inputs to
-Markdown with `convert_to_md.py`.
+Markdown with `convert_to_md.py`. Install `pdfplumber` or `python-docx` when
+prompted.
 
 ## Starting Jarvik
 
