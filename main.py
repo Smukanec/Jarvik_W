@@ -15,6 +15,7 @@ import tempfile
 import subprocess
 from filelock import FileLock
 import datetime
+import logging
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
@@ -176,13 +177,21 @@ def _ensure_memory(folder: str) -> tuple[str, FileLock]:
 
 def _read_memory_file(folder: str) -> list[dict]:
     path, _ = _ensure_memory(folder)
+    entries: list[dict] = []
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             lines = f.readlines()
             if MAX_MEMORY_ENTRIES:
                 lines = lines[-MAX_MEMORY_ENTRIES:]
-            return [json.loads(line) for line in lines if line.strip()]
-    return []
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    logging.warning("Skipping invalid memory line in %s: %s", path, line)
+    return entries
 
 
 # Cache default memory at startup
