@@ -403,7 +403,14 @@ logging in.
 
 ## Running Tests
 
-Unit tests live in the `tests/` directory. Execute them with:
+Unit tests live in the `tests/` directory. Install the development
+dependencies first and then execute the tests and style checks:
+
+```bash
+pip install -r dev-requirements.txt
+```
+
+Run the test suite and Ruff with:
 
 ```bash
 pytest
