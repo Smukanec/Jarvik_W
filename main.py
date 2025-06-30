@@ -644,10 +644,10 @@ def knowledge_upload():
     try:
         text = convert_file_to_txt(tmp_path)
     except Exception as e:
-        os.unlink(tmp_path)
         return jsonify({"error": str(e)}), 400
     finally:
-        os.unlink(tmp_path)
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
     target = PUBLIC_KNOWLEDGE_FOLDER
     if private and user:
