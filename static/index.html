@@ -156,8 +156,17 @@
   <h3>➕ Přidat znalost</h3>
   <input type="file" id="knowledge-file"><br>
   <label><input type="checkbox" id="knowledge-private"> Soukromá</label><br>
+  <input id="knowledge-desc" placeholder="Popis souboru"><br>
   <button onclick="uploadKnowledge()">Nahrát</button>
   <pre id="knowledge-status"></pre>
+
+  <h3>🧹 Smazat paměť</h3>
+  <label>Od: <input type="datetime-local" id="delete-from"></label><br>
+  <label>Do: <input type="datetime-local" id="delete-to"></label><br>
+  <button onclick="deleteByTime()">Smazat rozsah</button><br>
+  <input id="delete-keyword" placeholder="Klíčové slovo"><br>
+  <button onclick="deleteByKeyword()">Smazat podle slova</button>
+  <pre id="delete-status"></pre>
 
   <script>
     const MODEL_NAMES = {
@@ -425,9 +434,41 @@
       const formData = new FormData();
       formData.append('file', file);
       formData.append('private', document.getElementById('knowledge-private').checked ? '1' : '0');
+      const desc = document.getElementById('knowledge-desc').value.trim();
+      if (desc) formData.append('description', desc);
       const res = await authFetch('/knowledge/upload', { method: 'POST', body: formData });
       document.getElementById('knowledge-status').textContent = res.ok ? '✅ Uloženo' : '❌ Chyba';
+      if (res.ok) {
+        document.getElementById('knowledge-desc').value = '';
+      }
       fileInput.value = '';
+    }
+
+    async function deleteByTime() {
+      const from = document.getElementById('delete-from').value;
+      const to = document.getElementById('delete-to').value;
+      const body = {};
+      if (from) body.from = from;
+      if (to) body.to = to;
+      const res = await authFetch('/memory/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      document.getElementById('delete-status').textContent = res.ok ? data.message : '❌ Chyba';
+    }
+
+    async function deleteByKeyword() {
+      const keyword = document.getElementById('delete-keyword').value.trim();
+      if (!keyword) return;
+      const res = await authFetch('/memory/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword })
+      });
+      const data = await res.json();
+      document.getElementById('delete-status').textContent = res.ok ? data.message : '❌ Chyba';
     }
 
     document.getElementById("message").addEventListener("keydown", function (e) {

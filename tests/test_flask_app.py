@@ -139,11 +139,15 @@ def test_memory_search_with_invalid_line(client):
     import os
     import json
 
+    from datetime import datetime
     path = os.path.join(main.MEMORY_DIR, "public.jsonl")
+    ts = datetime.utcnow().isoformat()
     with open(path, "w", encoding="utf-8") as f:
-        f.write(json.dumps({"user": "ok", "jarvik": "good"}) + "\n")
+        f.write(json.dumps({"timestamp": ts, "role": "user", "message": "ok"}) + "\n")
+        f.write(json.dumps({"timestamp": ts, "role": "assistant", "message": "good"}) + "\n")
         f.write("{bad json}\n")
-        f.write(json.dumps({"user": "fine", "jarvik": "yes"}) + "\n")
+        f.write(json.dumps({"timestamp": ts, "role": "user", "message": "fine"}) + "\n")
+        f.write(json.dumps({"timestamp": ts, "role": "assistant", "message": "yes"}) + "\n")
 
     main.reload_memory()
 
@@ -379,4 +383,98 @@ def test_knowledge_upload(client, monkeypatch, tmp_path):
     assert res.status_code == 200
     assert called
     assert os.path.exists(os.path.join(tmp_path, "info.txt"))
+
+
+def test_knowledge_upload_sanitizes_filename(client, monkeypatch, tmp_path):
+    import main
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+    called = []
+    main.knowledge.folder = str(tmp_path)
+
+    def fake_reload():
+        called.append(True)
+
+    main.knowledge.reload = fake_reload
+    data = {
+        "file": (io.BytesIO(b"hello"), "../evil.txt"),
+        "private": "0",
+    }
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    assert called
+    fname = res.get_json()["file"]
+    # ensure filename is sanitized and file saved inside target folder
+    assert os.path.sep not in fname
+    assert os.path.exists(os.path.join(tmp_path, fname))
+
+
+def test_knowledge_upload_records_description(client, monkeypatch, tmp_path):
+    import main
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+    called = []
+    main.knowledge.folder = str(tmp_path)
+
+    def fake_reload():
+        called.append(True)
+
+    main.knowledge.reload = fake_reload
+    data = {
+        "file": (io.BytesIO(b"hello"), "note.txt"),
+        "private": "0",
+        "description": "some info",
+    }
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    assert called
+    entry = main.memory_caches["bob"][-1]
+    assert "Byl vložen znalostní soubor" in entry["jarvik"]
+    assert "some info" in entry["jarvik"]
+
+
+def test_memory_delete_by_keyword(client, tmp_path):
+    import main
+    import json
+
+    path, _ = main._ensure_memory(main.DEFAULT_MEMORY_FOLDER)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"user": "remove", "jarvik": "x"}) + "\n")
+        f.write(json.dumps({"user": "keep", "jarvik": "y"}) + "\n")
+    main.reload_memory()
+
+    res = client.post(
+        "/memory/delete",
+        json={"keyword": "remove"},
+        headers=_auth(),
+    )
+    assert res.status_code == 200
+    assert "1" in res.get_json()["message"]
+    entries = main.load_memory()
+    assert all("remove" not in e["user"] for e in entries)
+
+
+def test_read_memory_file_new_format(monkeypatch, tmp_path):
+    import main
+    import os
+    import json
+    from datetime import datetime
+
+    monkeypatch.setattr(main, "MEMORY_DIR", str(tmp_path))
+    path = os.path.join(main.MEMORY_DIR, "public.jsonl")
+    ts = datetime.utcnow().isoformat()
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"timestamp": ts, "role": "user", "message": "q"}) + "\n")
+        f.write(json.dumps({"timestamp": ts, "role": "assistant", "message": "a"}) + "\n")
+
+    entries = main._read_memory_file(main.DEFAULT_MEMORY_FOLDER)
+    assert entries == [{"user": "q", "jarvik": "a"}]
 

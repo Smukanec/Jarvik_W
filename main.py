@@ -1,4 +1,6 @@
 from flask import Flask, request, jsonify, send_file, after_this_request, g
+from werkzeug.utils import secure_filename
+from memory import vymazat_memory_range
 from rag_engine import (
     KnowledgeBase,
     load_txt_file,
@@ -17,6 +19,7 @@ from filelock import FileLock
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from datetime import datetime
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
@@ -206,15 +209,15 @@ def _ensure_memory(folder: str) -> tuple[str, FileLock]:
     """Return the memory log path and lock for *folder*.
 
     The ``public`` folder maps to ``memory/public.jsonl`` while any other
-    name creates ``memory/<name>/log.jsonl``. This supports per-user logs
-    without breaking the existing public memory file.
+    name creates ``memory/<name>/private.jsonl``. This keeps user history
+    separate from the shared public memory.
     """
 
     if folder == DEFAULT_MEMORY_FOLDER:
         path = os.path.join(MEMORY_DIR, "public.jsonl")
         lock_key = DEFAULT_MEMORY_FOLDER
     else:
-        path = os.path.join(MEMORY_DIR, folder, "log.jsonl")
+        path = os.path.join(MEMORY_DIR, folder, "private.jsonl")
         lock_key = folder
 
     if lock_key not in memory_locks:
@@ -230,16 +233,33 @@ def _read_memory_file(folder: str) -> list[dict]:
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-            if MAX_MEMORY_ENTRIES:
-                lines = lines[-MAX_MEMORY_ENTRIES:]
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    entries.append(json.loads(line))
-                except json.JSONDecodeError:
-                    logging.warning("Skipping invalid memory line in %s: %s", path, line)
+        # Keep the entire history by default. Only slice when a limit is set.
+        # if MAX_MEMORY_ENTRIES:
+        #     lines = lines[-MAX_MEMORY_ENTRIES:]
+
+        pending_user: str | None = None
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                logging.warning("Skipping invalid memory line in %s: %s", path, line)
+                continue
+
+            if "role" in obj and "message" in obj:
+                role = obj.get("role")
+                msg = obj.get("message", "")
+                if role == "user":
+                    pending_user = msg
+                elif role == "assistant" and pending_user is not None:
+                    entries.append({"user": pending_user, "jarvik": msg})
+                    pending_user = None
+                # ignore assistant line without preceding user
+            elif "user" in obj and "jarvik" in obj:
+                entries.append({"user": obj.get("user", ""), "jarvik": obj.get("jarvik", "")})
+            # ignore unrelated objects (e.g. feedback)
     return entries
 
 
@@ -269,11 +289,17 @@ def append_to_memory(user_msg: str, ai_response: str, folder: str = DEFAULT_MEMO
     entry = {"user": user_msg, "jarvik": ai_response}
     path, lock = _ensure_memory(folder)
     cache = memory_caches.setdefault(folder, _read_memory_file(folder))
+    now_iso = datetime.utcnow().isoformat()
+    entry_user = {"timestamp": now_iso, "role": "user", "message": user_msg}
+    entry_assist = {"timestamp": now_iso, "role": "assistant", "message": ai_response}
     with lock:
         cache.append(entry)
-        if MAX_MEMORY_ENTRIES and len(cache) > MAX_MEMORY_ENTRIES:
-            cache[:] = cache[-MAX_MEMORY_ENTRIES:]
-        _flush_memory_locked(folder)
+        # Do not truncate the cache unless a limit is explicitly set.
+        # if MAX_MEMORY_ENTRIES and len(cache) > MAX_MEMORY_ENTRIES:
+        #     cache[:] = cache[-MAX_MEMORY_ENTRIES:]
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry_user) + "\n")
+            f.write(json.dumps(entry_assist) + "\n")
 
 
 def flush_memory(folders: list[str] | None = None) -> None:
@@ -286,10 +312,14 @@ def flush_memory(folders: list[str] | None = None) -> None:
 def _flush_memory_locked(folder: str) -> None:
     path, _ = _ensure_memory(folder)
     cache = memory_caches.get(folder, [])
-    lines = cache[-MAX_MEMORY_ENTRIES:] if MAX_MEMORY_ENTRIES else cache
+    # When a limit is specified, slicing happens during flushing.
+    # lines = cache[-MAX_MEMORY_ENTRIES:] if MAX_MEMORY_ENTRIES else cache
+    lines = cache
     with open(path, "w", encoding="utf-8") as f:
         for item in lines:
-            f.write(json.dumps(item) + "\n")
+            now_iso = datetime.utcnow().isoformat()
+            f.write(json.dumps({"timestamp": now_iso, "role": "user", "message": item.get("user", "")}) + "\n")
+            f.write(json.dumps({"timestamp": now_iso, "role": "assistant", "message": item.get("jarvik", "")}) + "\n")
 
 
 @app.route("/login", methods=["POST"])
@@ -596,6 +626,23 @@ def memory_search():
         return jsonify(memory_entries[-5:])
     return jsonify(search_memory(query, memory_entries))
 
+
+@app.route("/memory/delete", methods=["POST"])
+@require_auth
+def delete_memory_entries():
+    """Remove memory entries for the current user."""
+    data = request.get_json(silent=True) or {}
+    t_from = data.get("from") or data.get("od")
+    t_to = data.get("to") or data.get("do")
+    keyword = data.get("keyword") or data.get("hledat_podle")
+    user: User | None = getattr(g, "current_user", None)
+    folder = user.nick if user else DEFAULT_MEMORY_FOLDER
+    path, lock = _ensure_memory(folder)
+    with lock:
+        removed = vymazat_memory_range(path, od=t_from, do=t_to, hledat_podle=keyword)
+        memory_caches[folder] = _read_memory_file(folder)
+    return jsonify({"message": f"{removed} entries deleted"})
+
 @app.route("/knowledge/search")
 @require_auth
 def knowledge_search():
@@ -632,24 +679,28 @@ def knowledge_upload():
     uploaded = request.files.get("file")
     if not uploaded or not uploaded.filename:
         return jsonify({"error": "file required"}), 400
+    filename = secure_filename(uploaded.filename)
+    if not filename:
+        return jsonify({"error": "invalid filename"}), 400
     private = request.form.get("private") in {"1", "true", "yes"}
-    ext = os.path.splitext(uploaded.filename)[1].lower()
+    description = request.form.get("description", "")
+    ext = os.path.splitext(filename)[1].lower()
     with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
         uploaded.save(tmp.name)
         tmp_path = tmp.name
     try:
         text = convert_file_to_txt(tmp_path)
     except Exception as e:
-        os.unlink(tmp_path)
         return jsonify({"error": str(e)}), 400
     finally:
-        os.unlink(tmp_path)
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
     target = PUBLIC_KNOWLEDGE_FOLDER
     if private and user:
         target = os.path.join(target, user.nick)
     os.makedirs(target, exist_ok=True)
-    base = os.path.splitext(uploaded.filename)[0]
+    base = os.path.splitext(filename)[0]
     name = f"{base}.txt"
     path = os.path.join(target, name)
     counter = 1
@@ -662,6 +713,17 @@ def knowledge_upload():
 
     kb = get_knowledge_base(user)
     kb.reload()
+    if not private:
+        knowledge.reload()
+
+    folder = user.nick if user else DEFAULT_MEMORY_FOLDER
+    msg = (
+        f'Byl vložen znalostní soubor: "{name}"\n'
+        f'Popis: {description}\n'
+        'Tento záznam pomůže Jarvikovi při budoucím vyhledávání.'
+    )
+    append_to_memory("", msg, folder=folder)
+
     return jsonify({"status": "saved", "file": name})
 
 

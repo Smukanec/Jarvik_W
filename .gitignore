@@ -2,5 +2,10 @@ __pycache__/
 *.pyc
 *.log
 venv/
+<<<<<<< HEAD
 venv/
+=======
+
+>>>>>>> 95ecc1ce8c5381683f89eab7e9266be88a7af194
 memory/*.jsonl
+*.log

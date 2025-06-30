@@ -62,6 +62,7 @@ listed in `requirements.txt`. Convert existing PDFs or DOCX documents using
 and `python-docx` for PDF and DOCX conversion, so install them manually if
 needed.
 
+Files uploaded via `/knowledge/upload` are automatically converted to text. Provide a `description` to store a short summary in memory.
 ### Folder layout and per-user data
 
 Conversation history is stored in `memory/`. The public log lives in
@@ -338,10 +339,13 @@ Jarvik exposes a few HTTP endpoints on the configured Flask port
   record to the memory log.
 * `GET /memory/search?q=term` – search stored memory entries. When no query is
   provided, the last five entries are returned.
+* `POST /memory/delete` – delete memory entries by time range or keyword using
+  `{ "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }` or `{ "keyword": "text" }`.
 * `GET /knowledge/search?q=term[&threshold=0.5]` – search the local knowledge
   base files. When ``threshold`` is omitted the server falls back to the value
   of ``RAG_THRESHOLD`` or ``0.6``.
 * `POST /knowledge/reload` – reload the knowledge base and return the number of loaded chunks. This uses the `KnowledgeBase` class to re-read the `knowledge/` directory.
+* `POST /knowledge/upload` – upload a file. Optional fields `private` and `description` mark the file as user-only and store the description in memory.
 * `GET /model` – return the currently running model name.
 
 * `POST /model` – switch models by posting `{ "model": "name" }`.
