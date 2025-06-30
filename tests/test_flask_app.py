@@ -2,6 +2,7 @@ import os
 import sys
 import importlib
 import base64
+import io
 import pytest
 
 pytest.importorskip("flask")
@@ -355,4 +356,27 @@ def test_prompt_notes_with_mocked_file_and_similarity(client, monkeypatch):
     prompt = call.get("prompt") or call["messages"][0]["content"]
     assert "Poznámka: note" in prompt
     assert open_calls
+
+
+def test_knowledge_upload(client, monkeypatch, tmp_path):
+    import main
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+    called = []
+    main.knowledge.folder = str(tmp_path)
+    def fake_reload():
+        called.append(True)
+    main.knowledge.reload = fake_reload
+    data = {
+        "file": (io.BytesIO(b"hello"), "info.txt"),
+        "private": "0",
+    }
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    assert called
+    assert os.path.exists(os.path.join(tmp_path, "info.txt"))
 

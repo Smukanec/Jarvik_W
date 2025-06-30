@@ -75,7 +75,7 @@ def _split_paragraphs(text: str) -> List[str]:
 def _load_folder(folder: str) -> List[str]:
     """Return a list of non-empty knowledge paragraphs from *folder*."""
     chunks: List[str] = []
-    for path in glob.glob(os.path.join(folder, "*.md")):
+    for path in glob.glob(os.path.join(folder, "*.txt")):
         try:
             content = load_txt_file(path)
             for para in _split_paragraphs(content):

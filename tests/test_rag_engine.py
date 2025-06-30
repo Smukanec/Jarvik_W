@@ -8,11 +8,11 @@ from rag_engine import KnowledgeBase, load_knowledge, search_knowledge
 
 @pytest.fixture
 def knowledge_dir(tmp_path):
-    """Create a temporary knowledge base with a Markdown file."""
+    """Create a temporary knowledge base with a text file."""
     folder = tmp_path / "kb"
     folder.mkdir()
 
-    (folder / "info.md").write_text("MD knowledge", encoding="utf-8")
+    (folder / "info.txt").write_text("MD knowledge", encoding="utf-8")
 
     return folder
 
@@ -52,7 +52,7 @@ def test_knowledge_base_reload(knowledge_dir):
     kb = KnowledgeBase(str(knowledge_dir))
     assert any("MD knowledge" in c for c in kb.chunks)
 
-    extra = knowledge_dir / "extra.md"
+    extra = knowledge_dir / "extra.txt"
     extra.write_text("Extra", encoding="utf-8")
     kb.reload()
     assert any("Extra" in c for c in kb.chunks)
@@ -95,8 +95,8 @@ def test_knowledge_base_multiple_folders(tmp_path):
     folder2 = tmp_path / "kb2"
     folder1.mkdir()
     folder2.mkdir()
-    (folder1 / "a.md").write_text("hello", encoding="utf-8")
-    (folder2 / "b.md").write_text("world", encoding="utf-8")
+    (folder1 / "a.txt").write_text("hello", encoding="utf-8")
+    (folder2 / "b.txt").write_text("world", encoding="utf-8")
 
     kb = KnowledgeBase([str(folder1), str(folder2)])
 
@@ -113,7 +113,7 @@ def test_knowledge_base_dj_smuk_search(tmp_path):
         "make crowds dance. Despite the name similarity to some websites, DJ \u0160muk"
         " is a person, not an online platform."
     )
-    (folder / "dj_smuk_info.md").write_text(text, encoding="utf-8")
+    (folder / "dj_smuk_info.txt").write_text(text, encoding="utf-8")
 
     kb = KnowledgeBase(str(folder))
 
