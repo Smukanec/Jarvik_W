@@ -339,6 +339,8 @@ Jarvik exposes a few HTTP endpoints on the configured Flask port
   record to the memory log.
 * `GET /memory/search?q=term` – search stored memory entries. When no query is
   provided, the last five entries are returned.
+* `POST /memory/delete` – delete memory entries by time range or keyword using
+  `{ "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }` or `{ "keyword": "text" }`.
 * `GET /knowledge/search?q=term[&threshold=0.5]` – search the local knowledge
   base files. When ``threshold`` is omitted the server falls back to the value
   of ``RAG_THRESHOLD`` or ``0.6``.
