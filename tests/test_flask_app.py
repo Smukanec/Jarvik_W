@@ -408,3 +408,31 @@ def test_knowledge_upload_sanitizes_filename(client, monkeypatch, tmp_path):
     assert os.path.sep not in fname
     assert os.path.exists(os.path.join(tmp_path, fname))
 
+
+def test_knowledge_upload_records_description(client, monkeypatch, tmp_path):
+    import main
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+    called = []
+    main.knowledge.folder = str(tmp_path)
+
+    def fake_reload():
+        called.append(True)
+
+    main.knowledge.reload = fake_reload
+    data = {
+        "file": (io.BytesIO(b"hello"), "note.txt"),
+        "private": "0",
+        "description": "some info",
+    }
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    assert called
+    entry = main.memory_caches["bob"][-1]
+    assert "Byl vložen znalostní soubor" in entry["jarvik"]
+    assert "some info" in entry["jarvik"]
+

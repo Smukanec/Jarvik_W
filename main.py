@@ -637,6 +637,7 @@ def knowledge_upload():
     if not filename:
         return jsonify({"error": "invalid filename"}), 400
     private = request.form.get("private") in {"1", "true", "yes"}
+    description = request.form.get("description", "")
     ext = os.path.splitext(filename)[1].lower()
     with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
         uploaded.save(tmp.name)
@@ -666,6 +667,15 @@ def knowledge_upload():
 
     kb = get_knowledge_base(user)
     kb.reload()
+
+    folder = user.nick if user else DEFAULT_MEMORY_FOLDER
+    msg = (
+        f'Byl vložen znalostní soubor: "{name}"\n'
+        f'Popis: {description}\n'
+        'Tento záznam pomůže Jarvikovi při budoucím vyhledávání.'
+    )
+    append_to_memory("", msg, folder=folder)
+
     return jsonify({"status": "saved", "file": name})
 
 
