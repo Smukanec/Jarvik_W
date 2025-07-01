@@ -4,9 +4,8 @@ This repository contains scripts to run the Jarvik assistant locally. Gemma 2B
 from Ollama is the default model used by all helper scripts. You can switch
 models at any time via the web interface or by calling the `/model` endpoint.
 Alternatively set the `MODEL_NAME` environment variable when starting a script
-to run a different model. Jarvik now keeps the entire conversation history by
-default. To enforce a limit, set the `MAX_MEMORY_ENTRIES` environment variable
-before launching.
+to run a different model. Jarvik keeps the entire conversation history by
+default.
 The Flask API listens on port `8010` by default, but you can override this using
 the `FLASK_PORT` environment variable. Set `OLLAMA_URL` to point at a remote
 Ollama instance if it is not running locally (defaults to
