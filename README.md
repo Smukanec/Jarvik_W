@@ -1,7 +1,7 @@
 # Jarvik
 
-This repository contains scripts to run the Jarvik assistant locally. Gemma 2B
-from Ollama is the default model used by all helper scripts. You can switch
+This repository contains scripts to run the Jarvik assistant locally. OpenChat
+is the default model used by all helper scripts. You can switch
 models at any time via the web interface or by calling the `/model` endpoint.
 Alternatively set the `MODEL_NAME` environment variable when starting a script
 to run a different model. Jarvik keeps the entire conversation history by
@@ -47,9 +47,9 @@ bash load.sh
 ```
 
 This will append alias commands such as `jarvik-start`, `jarvik-status`,
-`jarvik-model`, `jarvik-flask`, `jarvik-ollama`, `jarvik-start-7b` and
-`jarvik-start-q4` to your `~/.bashrc` and reload the file. The `jarvik-start`
-alias launches the default Gemma 2B model.
+`jarvik-model`, `jarvik-flask`, `jarvik-ollama` and wrappers for the
+available models to your `~/.bashrc` and reload the file. The `jarvik-start`
+alias launches the default OpenChat model.
 
 Knowledge files are loaded from the `knowledge/` folder at startup. Jarvik now
 loads only plain text (`.txt`) files by default. See `knowledge/sample.txt` for a
@@ -89,7 +89,7 @@ bash start_jarvik.sh
 ```
 
 The script checks for required commands and automatically downloads the
-`gemma:2b` model if it is missing. Po spuštění vypíše, zda se všechny části
+`openchat` model if it is missing. Po spuštění vypíše, zda se všechny části
 správně nastartovaly, případné chyby hledejte v souborech `*.log`.
 With the aliases loaded you can simply type:
 
@@ -104,66 +104,47 @@ The Flask API will query whichever model is specified. To start Jarvik with any
 model simply set the variable when invoking the script. For example:
 
 ```bash
-MODEL_NAME="mistral:7b-Q4_K_M" bash start_jarvik.sh
+MODEL_NAME="llama3:8b" bash start_jarvik.sh
 ```
 Alternatively you can run the dedicated wrapper scripts:
 
 ```bash
 # Default model
-bash start_gemma_2b.sh
+bash start_openchat.sh
 # or using the alias
 jarvik-start
 
-# Mistral 7B model
-bash start_mistral_7b.sh
-# or using the alias
-jarvik-start-7b
-# (available after running `bash load.sh`)
+# LLaMA 3 8B model
+bash start_llama3_8b.sh
+
+# Command R model
+bash start_command_r.sh
+
+# Nous Hermes 2 model
+bash start_nous_hermes2.sh
+
+# External API
+MODEL_NAME=api bash start_jarvik.sh
 ```
 
 Switching models is seamless because each wrapper calls `switch_model.sh` to
 restart with the selected model. Any running model or Flask instance is
 replaced automatically.
 
-Another helper script starts a pre-quantized Q4 model:
-
-```bash
-bash start_jarvik_q4.sh
-# or using the alias
-jarvik-start-q4
-# (available after running `bash load.sh`)
-```
-
-Additional wrappers are available for other models:
-
-```bash
-bash start_llama3_8b.sh      # llama3:8b
-bash start_command_r.sh      # command-r
-bash start_deepseek_coder.sh # deepseek-coder
-bash start_nous_hermes2.sh   # nous-hermes2
-bash start_phi3_mini.sh      # phi3:mini
-bash start_zephyr.sh         # zephyr
-```
-
 ## Supported Models
 
-All scripts assume the Gemma 2B model by default, but Jarvik includes wrappers
-for several others. Pull them with `ollama pull` before first use:
+Jarvik supports a handful of local models plus an optional external API. Pull
+them with `ollama pull` before first use:
 
 ```
-ollama pull gemma:2b
-ollama pull mistral:7b-Q4_K_M
-ollama pull jarvik-q4
+ollama pull openchat
 ollama pull llama3:8b
 ollama pull command-r
-ollama pull deepseek-coder
 ollama pull nous-hermes2
-ollama pull phi3:mini
-ollama pull zephyr
 ```
 
-Models such as Zephyr, Mistral or Jarvik Q4 automatically prepend information
-from `web.search()` when active. The selector in the web interface shows which
+Models marked with a globe icon automatically prepend information from
+`web.search()` when active. The selector in the web interface shows which
 models support web search.
 
 ### Switching models while running
@@ -173,19 +154,18 @@ interface or send a POST request to `/model` with `{"model": "name"}`. The same
 action is available from the shell via `switch_model.sh`:
 
 ```bash
-bash switch_model.sh mistral:7b-Q4_K_M
+bash switch_model.sh openchat
 ```
 
 The application restarts with the new model.
 
 ### Offline usage
 
-If you need to run without internet access, first download the model file (for
-example using `stahni-mistral-q4.sh`). Create a `Modelfile` that references the
-downloaded `.gguf` file and register it with:
+If you need to run without internet access, first download the model file. Create
+a `Modelfile` that references the downloaded `.gguf` file and register it with:
 
 ```bash
-ollama create mistral:7b-Q4_K_M -f Modelfile
+ollama create openchat -f Modelfile
 ```
 
 When you set `LOCAL_MODEL_FILE` to the path of your local model, the start
@@ -268,7 +248,7 @@ You can check multiple models at once by listing them as arguments or
 via the `MODEL_NAMES` environment variable:
 
 ```bash
-MODEL_NAMES="mistral jarvik-q4" bash status.sh
+MODEL_NAMES="openchat llama3:8b" bash status.sh
 ```
 
 ## Stopping Jarvik and Uninstall

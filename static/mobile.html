@@ -69,16 +69,10 @@
   <div id="interface" style="display:none">
     <h2 id="current-model-display">Model: <span id="current-model">?</span></h2>
     <select id="model-select">
-      <option value="zephyr" title="Vhodný pro obecné dotazy, plynulý dialog, podporuje vyhledávání informací z webu.">Zephyr – konverzační model 🌐</option>
-      <option value="phi3:mini" title="Vhodný jen pro krátké odpovědi, omezený kontext, nepracuje s webem.">Phi-3 Mini – extrémně rychlý, malý</option>
-      <option value="mistral" title="Univerzální, stabilní, vhodný pro většinu úloh, rozumí textu i strukturovanému kontextu z webu.">Mistral – výchozí model 🌐</option>
-      <option value="nous-hermes2" title="Dobře zvládá otázky, formální texty i instrukce, vhodný i pro složitější dotazy s doplněním z internetu.">Nous Hermes 2 – jemně doladěný Mistral 🌐</option>
+      <option value="openchat" title="Chytrý AI asistent. Vhodný pro běžné otázky, dialog a porozumění pokynům.">OpenChat – chytrý AI asistent 🌐</option>
       <option value="llama3:8b" title="Vysoká přesnost, vhodný pro složitější dotazy, rozumí webovému obsahu i dokumentům.">LLaMA 3 8B – velký jazykový model 🌐</option>
-      <option value="command-r" title="Optimalizovaný pro spojení s pamětí a znalostmi, ideální pro dotazy nad databázemi a webovým kontextem.">Command R – model pro RAG 🌐</option>
-      <option value="deepseek-coder" title="Vhodný na generování kódu, nevhodný pro obecné dotazy nebo vyhledávání na webu.">Deepseek Coder – pro programátory</option>
-      <option value="gemma:2b" title="Rychlý, ale s omezenou kapacitou a spolehlivostí, nevhodný pro komplexní úkoly.">Gemma 2B – velmi malý model</option>
-      <option value="mistral:7b-Q4_K_M" title="Stejné chování jako základní Mistral, vhodné i pro doplnění z internetu.">Mistral 7B – klasická verze 🌐</option>
-      <option value="jarvik-q4" title="Upravený model na míru, dobře rozumí historii a kontextu, umí doplňovat informace z webu.">Jarvik Q4 – laděný Mistral 🌐</option>
+      <option value="nous-hermes2" title="Dobře zvládá otázky, formální texty i instrukce, vhodný i pro složitější dotazy s doplněním z internetu.">Nous Hermes 2 – jemně doladěný Mistral 🌐</option>
+      <option value="command-r" title="Optimalizovaný pro programování, Python, shell, kódové úkoly.">Command R – model pro RAG 🌐</option>
       <option value="api" title="Externí API – dotazy jsou posílány do API.">Externí API</option>
     </select>
     <p id="model-desc"></p>
@@ -99,20 +93,10 @@
 
 <script>
 const MODEL_INFO = {
-  'zephyr': {
-    label: 'Zephyr – konverzační model 🌐',
+  'openchat': {
+    label: 'OpenChat – chytrý AI asistent 🌐',
     web: true,
-    desc: 'Vhodný pro obecné dotazy, plynulý dialog, podporuje vyhledávání informací z webu.'
-  },
-  'phi3:mini': {
-    label: 'Phi-3 Mini – extrémně rychlý, malý',
-    web: false,
-    desc: 'Vhodný jen pro krátké odpovědi, omezený kontext, nepracuje s webem.'
-  },
-  'mistral': {
-    label: 'Mistral – výchozí model 🌐',
-    web: true,
-    desc: 'Univerzální, stabilní, vhodný pro většinu úloh, rozumí textu i strukturovanému kontextu z webu.'
+    desc: 'Chytrý AI asistent. Vhodný pro běžné otázky, dialog a porozumění pokynům.'
   },
   'nous-hermes2': {
     label: 'Nous Hermes 2 – jemně doladěný Mistral 🌐',
@@ -127,27 +111,7 @@ const MODEL_INFO = {
   'command-r': {
     label: 'Command R – model pro RAG 🌐',
     web: true,
-    desc: 'Optimalizovaný pro spojení s pamětí a znalostmi, ideální pro dotazy nad databázemi a webovým kontextem.'
-  },
-  'deepseek-coder': {
-    label: 'Deepseek Coder – pro programátory',
-    web: false,
-    desc: 'Vhodný na generování kódu, nevhodný pro obecné dotazy nebo vyhledávání na webu.'
-  },
-  'gemma:2b': {
-    label: 'Gemma 2B – velmi malý model',
-    web: false,
-    desc: 'Rychlý, ale s omezenou kapacitou a spolehlivostí, nevhodný pro komplexní úkoly.'
-  },
-  'mistral:7b-Q4_K_M': {
-    label: 'Mistral 7B – klasická verze 🌐',
-    web: true,
-    desc: 'Stejné chování jako základní Mistral, vhodné i pro doplnění z internetu.'
-  },
-  'jarvik-q4': {
-    label: 'Jarvik Q4 – laděný Mistral 🌐',
-    web: true,
-    desc: 'Upravený model na míru, dobře rozumí historii a kontextu, umí doplňovat informace z webu.'
+    desc: 'Optimalizovaný pro programování, Python, shell, kódové úkoly.'
   },
   'api': {
     label: 'Externí API',

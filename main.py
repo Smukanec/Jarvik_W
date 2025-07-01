@@ -38,28 +38,11 @@ OPENAI_MODEL = API_MODEL  # backward compatibility
 # Extended information about supported models. Each entry contains a label shown
 # in the UI, whether web search should be enabled and a short description.
 MODEL_INFO: dict[str, dict] = {
-    "zephyr": {
-        "label": "Zephyr – konverzační model",
+    "openchat": {
+        "label": "OpenChat – chytrý AI asistent",
         "web_search": True,
         "description": (
-            "Vhodný pro obecné dotazy, plynulý dialog, podporuje vyhledávání "
-            "informací z webu."
-        ),
-    },
-    "phi3:mini": {
-        "label": "Phi-3 Mini – extrémně rychlý, malý",
-        "web_search": False,
-        "description": (
-            "Vhodný jen pro krátké odpovědi, omezený kontext, nepracuje s "
-            "webem."
-        ),
-    },
-    "mistral": {
-        "label": "Mistral – výchozí model",
-        "web_search": True,
-        "description": (
-            "Univerzální, stabilní, vhodný pro většinu úloh, rozumí textu i "
-            "strukturovanému kontextu z webu."
+            "Vhodný pro běžné otázky, dialog a porozumění pokynům."
         ),
     },
     "nous-hermes2": {
@@ -84,38 +67,6 @@ MODEL_INFO: dict[str, dict] = {
         "description": (
             "Optimalizovaný pro spojení s pamětí a znalostmi, ideální pro "
             "dotazy nad databázemi a webovým kontextem."
-        ),
-    },
-    "deepseek-coder": {
-        "label": "Deepseek Coder – pro programátory",
-        "web_search": False,
-        "description": (
-            "Vhodný na generování kódu, nevhodný pro obecné dotazy nebo "
-            "vyhledávání na webu."
-        ),
-    },
-    "gemma:2b": {
-        "label": "Gemma 2B – velmi malý model",
-        "web_search": False,
-        "description": (
-            "Rychlý, ale s omezenou kapacitou a spolehlivostí, nevhodný pro "
-            "komplexní úkoly."
-        ),
-    },
-    "mistral:7b-Q4_K_M": {
-        "label": "Mistral 7B – klasická verze",
-        "web_search": True,
-        "description": (
-            "Stejné chování jako základní Mistral, vhodné i pro doplnění z "
-            "internetu."
-        ),
-    },
-    "jarvik-q4": {
-        "label": "Jarvik Q4 – laděný Mistral",
-        "web_search": True,
-        "description": (
-            "Upravený model na míru, dobře rozumí historii a kontextu, umí "
-            "doplňovat informace z webu."
         ),
     },
 }
