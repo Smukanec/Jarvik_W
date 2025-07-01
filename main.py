@@ -423,6 +423,7 @@ def ask():
     target_folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
     append_to_memory(message, output, folder=target_folder)
 
+    return jsonify({"response": output, "debug": debug_log})
 
 
 @app.route("/ask_web", methods=["POST"])
