@@ -2,6 +2,11 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
+  <script>
+    if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      window.location.href = '/static/mobile.html';
+    }
+  </script>
   <title>Jarvik</title>
   <style>
     body {
@@ -56,6 +61,12 @@
       flex: 1 1 30%;
       min-width: 250px;
     }
+    #response-panel {
+      flex: 2 1 60%;
+    }
+    #response {
+      min-height: 300px;
+    }
     details summary {
       cursor: pointer;
       font-weight: bold;
@@ -106,6 +117,7 @@
     <option value="api">Externí API</option>
   </select>
   <button onclick="switchModel()">Switch model</button>
+  <p id="model-desc"></p>
   <pre id="model-status"></pre>
 
   <pre id="token-display"></pre>
@@ -121,10 +133,12 @@
 
   <div id="panels">
     <div class="panel">
-      <h3>📖 Kontext</h3>
-      <pre id="context"></pre>
+      <details>
+        <summary>📖 Kontext</summary>
+        <pre id="context"></pre>
+      </details>
     </div>
-    <div class="panel">
+    <div class="panel" id="response-panel">
       <h3>🤖 Odpověď</h3>
       <pre id="response"></pre>
       <a id="download" style="display:none" href="#">⬇️ Stáhnout odpověď</a>
@@ -145,7 +159,7 @@
     </div>
   </div>
 
-  <details open>
+  <details>
     <summary>🕘 Historie</summary>
     <pre id="log"></pre>
   </details>
@@ -183,6 +197,24 @@
       'jarvik-q4': 'Jarvik Q4',
       'api': 'Externí API'
     };
+    const MODEL_DESCRIPTIONS = {
+      'phi3:mini': 'Phi3 Mini – malý model pro běžné dotazy.',
+      'mistral': 'Mistral – univerzální model pro češtinu.',
+      'nous-hermes2': 'Nous Hermes2 – vyladěný na instrukce.',
+      'llama3:8b': 'Llama3 8B – open model s širokým využitím.',
+      'command-r': 'Command R – model zaměřený na kódování.',
+      'zephyr': 'Zephyr – konverzační model.',
+      'deepseek-coder': 'Deepseek Coder – specialista na programování.',
+      'gemma:2b': 'Gemma 2B – základní rychlý model.',
+      'mistral:7b-Q4_K_M': 'Mistral 7B – kompaktní a výkonný model.',
+      'jarvik-q4': 'Jarvik Q4 – lokální model Jarvika.',
+      'api': 'Externí API – dotazy jsou posílány do API.'
+    };
+
+    function updateModelDesc() {
+      const val = document.getElementById('model-select').value;
+      document.getElementById('model-desc').textContent = MODEL_DESCRIPTIONS[val] || '';
+    }
 
     let token = localStorage.getItem('token') || '';
     let apiKey = localStorage.getItem('apiKey') || '';
@@ -211,6 +243,7 @@
           sel.appendChild(option);
         }
         sel.value = data.model;
+        updateModelDesc();
       }
     }
 
@@ -225,6 +258,7 @@
       document.getElementById('model-status').textContent = '🔄 Restartuji, chvíli strpení...';
       const name = MODEL_NAMES[model] || model;
       document.getElementById('current-model').textContent = name;
+      updateModelDesc();
     }
 
    function showInterface() {
@@ -233,7 +267,13 @@
       loadModel();
       document.getElementById('token-display').textContent = token;
       const select = document.getElementById('model-select');
-      if (select) select.addEventListener('change', switchModel);
+      if (select) {
+        select.addEventListener('change', () => {
+          switchModel();
+          updateModelDesc();
+        });
+        updateModelDesc();
+      }
     }
 
     async function checkAuth() {
