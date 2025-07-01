@@ -177,11 +177,7 @@ DEFAULT_MEMORY_FOLDER = "public"
 memory_caches: dict[str, list[dict]] = {}
 memory_locks: dict[str, FileLock] = {}
 
-# Jarvik now keeps conversation history indefinitely.
-# To enforce a limit, set the ``MAX_MEMORY_ENTRIES`` environment variable
-# manually before launching the application.
-limit_env = os.getenv("MAX_MEMORY_ENTRIES")
-MAX_MEMORY_ENTRIES = int(limit_env) if limit_env and limit_env.isdigit() else None
+# Jarvik keeps conversation history indefinitely.
 
 app = Flask(__name__)
 
@@ -233,9 +229,7 @@ def _read_memory_file(folder: str) -> list[dict]:
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        # Keep the entire history by default. Only slice when a limit is set.
-        # if MAX_MEMORY_ENTRIES:
-        #     lines = lines[-MAX_MEMORY_ENTRIES:]
+        # Keep the entire history; no size limit is enforced.
 
         pending_user: str | None = None
         for line in lines:
@@ -260,6 +254,7 @@ def _read_memory_file(folder: str) -> list[dict]:
             elif "user" in obj and "jarvik" in obj:
                 entries.append({"user": obj.get("user", ""), "jarvik": obj.get("jarvik", "")})
             # ignore unrelated objects (e.g. feedback)
+    # Keep the entire cache unchanged.
     return entries
 
 
@@ -294,9 +289,6 @@ def append_to_memory(user_msg: str, ai_response: str, folder: str = DEFAULT_MEMO
     entry_assist = {"timestamp": now_iso, "role": "assistant", "message": ai_response}
     with lock:
         cache.append(entry)
-        # Do not truncate the cache unless a limit is explicitly set.
-        # if MAX_MEMORY_ENTRIES and len(cache) > MAX_MEMORY_ENTRIES:
-        #     cache[:] = cache[-MAX_MEMORY_ENTRIES:]
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry_user) + "\n")
             f.write(json.dumps(entry_assist) + "\n")
@@ -312,8 +304,6 @@ def flush_memory(folders: list[str] | None = None) -> None:
 def _flush_memory_locked(folder: str) -> None:
     path, _ = _ensure_memory(folder)
     cache = memory_caches.get(folder, [])
-    # When a limit is specified, slicing happens during flushing.
-    # lines = cache[-MAX_MEMORY_ENTRIES:] if MAX_MEMORY_ENTRIES else cache
     lines = cache
     with open(path, "w", encoding="utf-8") as f:
         for item in lines:
