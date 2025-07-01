@@ -115,6 +115,7 @@
 
   <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea><br>
   <input type="file" id="file"><br>
+  <label><input type="checkbox" id="memory-private"> Soukromá</label><br>
   <button onclick="ask()">Odeslat</button>
   <pre id="activity"></pre>
 
@@ -309,6 +310,10 @@
 
       const formData = new FormData();
       formData.append("message", msg);
+      formData.append(
+        "private",
+        document.getElementById('memory-private').checked ? '1' : '0'
+      );
       if (file) {
         formData.append("file", file);
       }

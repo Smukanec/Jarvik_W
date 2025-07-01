@@ -181,6 +181,34 @@ def test_per_user_memory(client):
     assert main.memory_caches["bob"][-1]["user"] == "hi"
 
 
+def test_public_memory_when_flag_false(client):
+    import main
+    client.post("/ask", json={"message": "pub", "private": False}, headers=_auth())
+    assert main.memory_caches[main.DEFAULT_MEMORY_FOLDER][-1]["user"] == "pub"
+
+
+def test_public_memory_when_flag_false_web(client, monkeypatch):
+    import main
+    monkeypatch.setattr(main, "search_and_scrape", lambda q: "web")
+    client.post(
+        "/ask_web",
+        json={"message": "pub2", "private": False},
+        headers=_auth(),
+    )
+    assert main.memory_caches[main.DEFAULT_MEMORY_FOLDER][-1]["user"] == "pub2"
+
+
+def test_public_memory_when_flag_false_file(client):
+    import main
+    res = client.post(
+        "/ask_file",
+        data={"message": "pubf", "private": "0"},
+        headers=_auth(),
+    )
+    assert res.status_code == 200
+    assert main.memory_caches[main.DEFAULT_MEMORY_FOLDER][-1]["user"] == "pubf"
+
+
 def test_per_user_knowledge_folders(client):
     import main
     client.get("/knowledge/search", query_string={"q": "hello"}, headers=_auth())
@@ -206,6 +234,16 @@ def test_memory_add(client):
     )
     assert res.status_code == 200
     assert {"user": "q", "jarvik": "a"} in main.memory_caches["bob"]
+
+
+def test_memory_add_public(client):
+    import main
+    client.post(
+        "/memory/add",
+        json={"user": "qp", "jarvik": "ap", "private": False},
+        headers=_auth(),
+    )
+    assert main.memory_caches[main.DEFAULT_MEMORY_FOLDER][-1]["user"] == "qp"
 
 
 def test_knowledge_reload(client, monkeypatch):
