@@ -429,7 +429,8 @@ def ask():
         debug_log.append(str(e))
         return jsonify({"error": "❌ Chyba při komunikaci s Ollamou", "debug": debug_log}), 500
 
-    target_folder = user.nick if user else DEFAULT_MEMORY_FOLDER
+    private = str(data.get("private", "true")).lower() in {"1", "true", "yes"}
+    target_folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
     append_to_memory(message, output, folder=target_folder)
 
 
@@ -489,7 +490,8 @@ def ask_web():
         debug_log.append(str(e))
         return jsonify({"error": "❌ Chyba při komunikaci s Ollamou", "debug": debug_log}), 500
 
-    target_folder = user.nick if user else DEFAULT_MEMORY_FOLDER
+    private = str(data.get("private", "true")).lower() in {"1", "true", "yes"}
+    target_folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
     append_to_memory(query, output, folder=target_folder)
 
     return jsonify({"response": output, "debug": debug_log})
@@ -566,7 +568,8 @@ def ask_file():
             500,
         )
 
-    target_folder = user.nick if user else DEFAULT_MEMORY_FOLDER
+    private = request.form.get("private", "true").lower() in {"1", "true", "yes"}
+    target_folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
     append_to_memory(message, output, folder=target_folder)
 
     if ext == ".txt":
@@ -611,7 +614,8 @@ def memory_add():
     if not user_msg or not jarvik_msg:
         return jsonify({"error": "user and jarvik required"}), 400
     user: User | None = getattr(g, "current_user", None)
-    folder = user.nick if user else DEFAULT_MEMORY_FOLDER
+    private = str(data.get("private", "true")).lower() in {"1", "true", "yes"}
+    folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
     append_to_memory(user_msg, jarvik_msg, folder=folder)
     return jsonify({"status": "ok"})
 
