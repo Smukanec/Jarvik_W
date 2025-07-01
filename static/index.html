@@ -104,17 +104,17 @@
   <div id="interface" style="display:none">
   <h2 id="current-model-display">Running model: <span id="current-model">?</span></h2>
   <select id="model-select">
-    <option value="phi3:mini">Phi3 Mini</option>
-    <option value="mistral">Mistral</option>
-    <option value="nous-hermes2">Nous Hermes2</option>
-    <option value="llama3:8b">Llama3 8B</option>
-    <option value="command-r">Command R</option>
-    <option value="zephyr">Zephyr</option>
-    <option value="deepseek-coder">Deepseek Coder</option>
-    <option value="gemma:2b">Gemma 2B</option>
-    <option value="mistral:7b-Q4_K_M">Mistral 7B</option>
-    <option value="jarvik-q4">Jarvik Q4</option>
-    <option value="api">Externí API</option>
+    <option value="zephyr" title="Vhodný pro obecné dotazy, plynulý dialog, podporuje vyhledávání informací z webu.">Zephyr – konverzační model 🌐</option>
+    <option value="phi3:mini" title="Vhodný jen pro krátké odpovědi, omezený kontext, nepracuje s webem.">Phi-3 Mini – extrémně rychlý, malý</option>
+    <option value="mistral" title="Univerzální, stabilní, vhodný pro většinu úloh, rozumí textu i strukturovanému kontextu z webu.">Mistral – výchozí model 🌐</option>
+    <option value="nous-hermes2" title="Dobře zvládá otázky, formální texty i instrukce, vhodný i pro složitější dotazy s doplněním z internetu.">Nous Hermes 2 – jemně doladěný Mistral 🌐</option>
+    <option value="llama3:8b" title="Vysoká přesnost, vhodný pro složitější dotazy, rozumí webovému obsahu i dokumentům.">LLaMA 3 8B – velký jazykový model 🌐</option>
+    <option value="command-r" title="Optimalizovaný pro spojení s pamětí a znalostmi, ideální pro dotazy nad databázemi a webovým kontextem.">Command R – model pro RAG 🌐</option>
+    <option value="deepseek-coder" title="Vhodný na generování kódu, nevhodný pro obecné dotazy nebo vyhledávání na webu.">Deepseek Coder – pro programátory</option>
+    <option value="gemma:2b" title="Rychlý, ale s omezenou kapacitou a spolehlivostí, nevhodný pro komplexní úkoly.">Gemma 2B – velmi malý model</option>
+    <option value="mistral:7b-Q4_K_M" title="Stejné chování jako základní Mistral, vhodné i pro doplnění z internetu.">Mistral 7B – klasická verze 🌐</option>
+    <option value="jarvik-q4" title="Upravený model na míru, dobře rozumí historii a kontextu, umí doplňovat informace z webu.">Jarvik Q4 – laděný Mistral 🌐</option>
+    <option value="api" title="Externí API – dotazy jsou posílány do API.">Externí API</option>
   </select>
   <button onclick="switchModel()">Switch model</button>
   <p id="model-desc"></p>
@@ -184,32 +184,70 @@
   <pre id="delete-status"></pre>
 
   <script>
-    const MODEL_NAMES = {
-      'phi3:mini': 'Phi3 Mini',
-      'mistral': 'Mistral',
-      'nous-hermes2': 'Nous Hermes2',
-      'llama3:8b': 'Llama3 8B',
-      'command-r': 'Command R',
-      'zephyr': 'Zephyr',
-      'deepseek-coder': 'Deepseek Coder',
-      'gemma:2b': 'Gemma 2B',
-      'mistral:7b-Q4_K_M': 'Mistral 7B',
-      'jarvik-q4': 'Jarvik Q4',
-      'api': 'Externí API'
+    const MODEL_INFO = {
+      'zephyr': {
+        label: 'Zephyr – konverzační model 🌐',
+        web: true,
+        desc: 'Vhodný pro obecné dotazy, plynulý dialog, podporuje vyhledávání informací z webu.'
+      },
+      'phi3:mini': {
+        label: 'Phi-3 Mini – extrémně rychlý, malý',
+        web: false,
+        desc: 'Vhodný jen pro krátké odpovědi, omezený kontext, nepracuje s webem.'
+      },
+      'mistral': {
+        label: 'Mistral – výchozí model 🌐',
+        web: true,
+        desc: 'Univerzální, stabilní, vhodný pro většinu úloh, rozumí textu i strukturovanému kontextu z webu.'
+      },
+      'nous-hermes2': {
+        label: 'Nous Hermes 2 – jemně doladěný Mistral 🌐',
+        web: true,
+        desc: 'Dobře zvládá otázky, formální texty i instrukce, vhodný i pro složitější dotazy s doplněním z internetu.'
+      },
+      'llama3:8b': {
+        label: 'LLaMA 3 8B – velký jazykový model 🌐',
+        web: true,
+        desc: 'Vysoká přesnost, vhodný pro složitější dotazy, rozumí webovému obsahu i dokumentům.'
+      },
+      'command-r': {
+        label: 'Command R – model pro RAG 🌐',
+        web: true,
+        desc: 'Optimalizovaný pro spojení s pamětí a znalostmi, ideální pro dotazy nad databázemi a webovým kontextem.'
+      },
+      'deepseek-coder': {
+        label: 'Deepseek Coder – pro programátory',
+        web: false,
+        desc: 'Vhodný na generování kódu, nevhodný pro obecné dotazy nebo vyhledávání na webu.'
+      },
+      'gemma:2b': {
+        label: 'Gemma 2B – velmi malý model',
+        web: false,
+        desc: 'Rychlý, ale s omezenou kapacitou a spolehlivostí, nevhodný pro komplexní úkoly.'
+      },
+      'mistral:7b-Q4_K_M': {
+        label: 'Mistral 7B – klasická verze 🌐',
+        web: true,
+        desc: 'Stejné chování jako základní Mistral, vhodné i pro doplnění z internetu.'
+      },
+      'jarvik-q4': {
+        label: 'Jarvik Q4 – laděný Mistral 🌐',
+        web: true,
+        desc: 'Upravený model na míru, dobře rozumí historii a kontextu, umí doplňovat informace z webu.'
+      },
+      'api': {
+        label: 'Externí API',
+        web: false,
+        desc: 'Externí API – dotazy jsou posílány do API.'
+      }
     };
-    const MODEL_DESCRIPTIONS = {
-      'phi3:mini': 'Phi3 Mini – malý model pro běžné dotazy.',
-      'mistral': 'Mistral – univerzální model pro češtinu.',
-      'nous-hermes2': 'Nous Hermes2 – vyladěný na instrukce.',
-      'llama3:8b': 'Llama3 8B – open model s širokým využitím.',
-      'command-r': 'Command R – model zaměřený na kódování.',
-      'zephyr': 'Zephyr – konverzační model.',
-      'deepseek-coder': 'Deepseek Coder – specialista na programování.',
-      'gemma:2b': 'Gemma 2B – základní rychlý model.',
-      'mistral:7b-Q4_K_M': 'Mistral 7B – kompaktní a výkonný model.',
-      'jarvik-q4': 'Jarvik Q4 – lokální model Jarvika.',
-      'api': 'Externí API – dotazy jsou posílány do API.'
-    };
+
+    const MODEL_NAMES = Object.fromEntries(
+      Object.entries(MODEL_INFO).map(([k, v]) => [k, v.label])
+    );
+    const MODEL_DESCRIPTIONS = Object.fromEntries(
+      Object.entries(MODEL_INFO).map(([k, v]) => [k, v.desc])
+    );
 
     function updateModelDesc() {
       const val = document.getElementById('model-select').value;
