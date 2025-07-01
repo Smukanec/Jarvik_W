@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jarvik Mobile</title>
+  <style>
+    body {
+      font-family: monospace;
+      background-color: #121212;
+      color: #c8f6c8;
+      margin: 1em;
+    }
+    textarea, select {
+      width: 100%;
+      padding: 0.8em;
+      font-size: 1em;
+      border: 2px solid #00ff00;
+      border-radius: 8px;
+      background-color: #1e1e1e;
+      color: #c8f6c8;
+    }
+    button {
+      background-color: #00aa00;
+      color: white;
+      border: none;
+      padding: 0.6em 1.2em;
+      font-size: 1em;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 0.5em;
+    }
+    button:hover {
+      background-color: #007700;
+    }
+    pre {
+      background-color: #1e1e1e;
+      border: 1px solid #2e7d32;
+      padding: 1em;
+      border-radius: 8px;
+      margin-top: 1em;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    #response {
+      min-height: 200px;
+    }
+    #spinner {
+      margin-top: 0.5em;
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: bold;
+      color: #00ff00;
+      margin-top: 1em;
+    }
+  </style>
+</head>
+<body>
+  <img src="/static/alternativ.png" alt="Jarvik logo" style="max-height:80px;">
+  <div id="login" style="display:none">
+    <input id="nick" placeholder="nick"><br>
+    <input id="password" type="password" placeholder="password"><br>
+    <input id="apikey" placeholder="API key (optional)"><br>
+    <button onclick="doLogin()">Login</button>
+    <pre id="login-status"></pre>
+  </div>
+
+  <div id="interface" style="display:none">
+    <h2 id="current-model-display">Model: <span id="current-model">?</span></h2>
+    <select id="model-select">
+      <option value="phi3:mini">Phi3 Mini</option>
+      <option value="mistral">Mistral</option>
+      <option value="nous-hermes2">Nous Hermes2</option>
+      <option value="llama3:8b">Llama3 8B</option>
+      <option value="command-r">Command R</option>
+      <option value="zephyr">Zephyr</option>
+      <option value="deepseek-coder">Deepseek Coder</option>
+      <option value="gemma:2b">Gemma 2B</option>
+      <option value="mistral:7b-Q4_K_M">Mistral 7B</option>
+      <option value="jarvik-q4">Jarvik Q4</option>
+      <option value="api">Externí API</option>
+    </select>
+    <p id="model-desc"></p>
+    <button onclick="switchModel()">Switch model</button>
+
+    <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea><br>
+    <label><input type="radio" name="mem" id="mem-private" value="1" checked> Soukromá</label>
+    <label><input type="radio" name="mem" value="0"> Veřejná</label><br>
+    <button onclick="ask()">Odeslat</button>
+    <div id="spinner" style="display:none">⏳</div>
+
+    <pre id="response"></pre>
+    <details>
+      <summary>📖 Kontext</summary>
+      <pre id="context"></pre>
+    </details>
+  </div>
+
+<script>
+const MODEL_NAMES = {
+  'phi3:mini': 'Phi3 Mini',
+  'mistral': 'Mistral',
+  'nous-hermes2': 'Nous Hermes2',
+  'llama3:8b': 'Llama3 8B',
+  'command-r': 'Command R',
+  'zephyr': 'Zephyr',
+  'deepseek-coder': 'Deepseek Coder',
+  'gemma:2b': 'Gemma 2B',
+  'mistral:7b-Q4_K_M': 'Mistral 7B',
+  'jarvik-q4': 'Jarvik Q4',
+  'api': 'Externí API'
+};
+const MODEL_DESCRIPTIONS = {
+  'phi3:mini': 'Phi3 Mini – malý model pro běžné dotazy.',
+  'mistral': 'Mistral – univerzální model pro češtinu.',
+  'nous-hermes2': 'Nous Hermes2 – vyladěný na instrukce.',
+  'llama3:8b': 'Llama3 8B – open model s širokým využitím.',
+  'command-r': 'Command R – model zaměřený na kódování.',
+  'zephyr': 'Zephyr – konverzační model.',
+  'deepseek-coder': 'Deepseek Coder – specialista na programování.',
+  'gemma:2b': 'Gemma 2B – základní rychlý model.',
+  'mistral:7b-Q4_K_M': 'Mistral 7B – kompaktní a výkonný model.',
+  'jarvik-q4': 'Jarvik Q4 – lokální model Jarvika.',
+  'api': 'Externí API – dotazy jsou posílány do API.'
+};
+let token = localStorage.getItem('token') || '';
+let apiKey = localStorage.getItem('apiKey') || '';
+
+function authFetch(url, options = {}) {
+  options.headers = options.headers || {};
+  if (token) options.headers['Authorization'] = 'Bearer ' + token;
+  if (apiKey) options.headers['X-API-Key'] = apiKey;
+  return fetch(url, options);
+}
+
+function updateModelDesc() {
+  const val = document.getElementById('model-select').value;
+  document.getElementById('model-desc').textContent = MODEL_DESCRIPTIONS[val] || '';
+}
+
+async function loadModel() {
+  const res = await authFetch('/model');
+  const data = await res.json();
+  const name = MODEL_NAMES[data.model] || data.model;
+  document.getElementById('current-model').textContent = name;
+  const sel = document.getElementById('model-select');
+  if (sel) {
+    let option = Array.from(sel.options).find(o => o.value === data.model);
+    if (!option) {
+      option = new Option(name, data.model);
+      sel.appendChild(option);
+    }
+    sel.value = data.model;
+    updateModelDesc();
+  }
+}
+
+async function switchModel() {
+  const model = document.getElementById('model-select').value;
+  await authFetch('/model', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model })
+  });
+  const name = MODEL_NAMES[model] || model;
+  document.getElementById('current-model').textContent = name;
+  updateModelDesc();
+}
+
+function showInterface() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('interface').style.display = 'block';
+  loadModel();
+  const sel = document.getElementById('model-select');
+  if (sel) {
+    sel.addEventListener('change', () => {
+      switchModel();
+      updateModelDesc();
+    });
+    updateModelDesc();
+  }
+}
+
+async function checkAuth() {
+  if (!token) {
+    document.getElementById('login').style.display = 'block';
+    document.getElementById('apikey').value = apiKey;
+    return;
+  }
+  const res = await authFetch('/model');
+  if (res.status === 401) {
+    document.getElementById('login').style.display = 'block';
+    token = '';
+    localStorage.removeItem('token');
+  } else {
+    showInterface();
+  }
+}
+
+async function doLogin() {
+  const nick = document.getElementById('nick').value.trim();
+  const password = document.getElementById('password').value;
+  apiKey = document.getElementById('apikey').value.trim();
+  if (apiKey) localStorage.setItem('apiKey', apiKey);
+  const res = await fetch('/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nick, password })
+  });
+  if (res.ok) {
+    const data = await res.json();
+    token = data.token;
+    localStorage.setItem('token', token);
+    document.getElementById('login-status').textContent = '';
+    showInterface();
+  } else {
+    document.getElementById('login-status').textContent = 'Login failed';
+  }
+}
+
+async function ask() {
+  const msg = document.getElementById('message').value.trim();
+  if (!msg) return;
+  document.getElementById('spinner').style.display = 'block';
+  document.getElementById('response').textContent = '';
+  try {
+    const ctxRes = await authFetch('/knowledge/search?q=' + encodeURIComponent(msg));
+    if (ctxRes.ok) {
+      const ctxData = await ctxRes.json();
+      const ctxText = ctxData.length ? ctxData.join("\n\n---\n\n") : '(žádný kontext)';
+      document.getElementById('context').textContent = ctxText;
+    } else {
+      document.getElementById('context').textContent = '❌ Kontext se nepodařilo načíst';
+    }
+  } catch (e) {
+    document.getElementById('context').textContent = '❌ Kontext se nepodařilo načíst';
+  }
+  const res = await authFetch('/ask', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: msg,
+      private: document.getElementById('mem-private').checked
+    })
+  });
+  if (res.ok) {
+    const data = await res.json();
+    document.getElementById('response').textContent = data.response || '❌ Chyba odpovědi';
+  } else {
+    document.getElementById('response').textContent = '❌ Chyba';
+  }
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('message').value = '';
+}
+
+document.getElementById('message').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    ask();
+  }
+});
+checkAuth();
+</script>
+</body>
+</html>
