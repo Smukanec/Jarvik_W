@@ -35,6 +35,102 @@ API_MODEL = os.getenv("API_MODEL", os.getenv("OPENAI_MODEL", "gpt-3.5-turbo"))
 API_KEY = os.getenv("API_KEY")
 OPENAI_MODEL = API_MODEL  # backward compatibility
 
+# Extended information about supported models. Each entry contains a label shown
+# in the UI, whether web search should be enabled and a short description.
+MODEL_INFO: dict[str, dict] = {
+    "zephyr": {
+        "label": "Zephyr – konverzační model",
+        "web_search": True,
+        "description": (
+            "Vhodný pro obecné dotazy, plynulý dialog, podporuje vyhledávání "
+            "informací z webu."
+        ),
+    },
+    "phi3:mini": {
+        "label": "Phi-3 Mini – extrémně rychlý, malý",
+        "web_search": False,
+        "description": (
+            "Vhodný jen pro krátké odpovědi, omezený kontext, nepracuje s "
+            "webem."
+        ),
+    },
+    "mistral": {
+        "label": "Mistral – výchozí model",
+        "web_search": True,
+        "description": (
+            "Univerzální, stabilní, vhodný pro většinu úloh, rozumí textu i "
+            "strukturovanému kontextu z webu."
+        ),
+    },
+    "nous-hermes2": {
+        "label": "Nous Hermes 2 – jemně doladěný Mistral",
+        "web_search": True,
+        "description": (
+            "Dobře zvládá otázky, formální texty i instrukce, vhodný i pro "
+            "složitější dotazy s doplněním z internetu."
+        ),
+    },
+    "llama3:8b": {
+        "label": "LLaMA 3 8B – velký jazykový model",
+        "web_search": True,
+        "description": (
+            "Vysoká přesnost, vhodný pro složitější dotazy, rozumí webovému "
+            "obsahu i dokumentům."
+        ),
+    },
+    "command-r": {
+        "label": "Command R – model pro RAG",
+        "web_search": True,
+        "description": (
+            "Optimalizovaný pro spojení s pamětí a znalostmi, ideální pro "
+            "dotazy nad databázemi a webovým kontextem."
+        ),
+    },
+    "deepseek-coder": {
+        "label": "Deepseek Coder – pro programátory",
+        "web_search": False,
+        "description": (
+            "Vhodný na generování kódu, nevhodný pro obecné dotazy nebo "
+            "vyhledávání na webu."
+        ),
+    },
+    "gemma:2b": {
+        "label": "Gemma 2B – velmi malý model",
+        "web_search": False,
+        "description": (
+            "Rychlý, ale s omezenou kapacitou a spolehlivostí, nevhodný pro "
+            "komplexní úkoly."
+        ),
+    },
+    "mistral:7b-Q4_K_M": {
+        "label": "Mistral 7B – klasická verze",
+        "web_search": True,
+        "description": (
+            "Stejné chování jako základní Mistral, vhodné i pro doplnění z "
+            "internetu."
+        ),
+    },
+    "jarvik-q4": {
+        "label": "Jarvik Q4 – laděný Mistral",
+        "web_search": True,
+        "description": (
+            "Upravený model na míru, dobře rozumí historii a kontextu, umí "
+            "doplňovat informace z webu."
+        ),
+    },
+}
+
+# Precompute a list of model names that should automatically gather information
+# from the internet.
+ENABLE_WEB_SEARCH_MODELS = [
+    name for name, info in MODEL_INFO.items() if info.get("web_search")
+]
+
+
+def should_use_web_search(model_name: str) -> bool:
+    """Return ``True`` if ``model_name`` should trigger web.search()."""
+    return model_name in ENABLE_WEB_SEARCH_MODELS
+
 
 def call_api(prompt: str, key: str | None = None) -> str:
     """Send *prompt* to an external API and return the response."""
@@ -392,8 +488,16 @@ def ask():
     rag_context = kb.search(message, threshold=RAG_THRESHOLD)
     debug_log.append(f"📚 Kontext z RAG: {len(rag_context)} výsledků")
 
+    web_info = ""
+    if should_use_web_search(MODEL_NAME) and message:
+        web_info = search_and_scrape(message)
+        debug_log.append("🌐 Vyhledáno na webu")
+
     # Vytvoření promptu pro model
-    prompt = f"Uživatel: {message}\n"
+    prompt = ""
+    if web_info:
+        prompt += f"{web_info}\n\n"
+    prompt += f"Uživatel: {message}\n"
     if rag_context:
         prompt += "\n".join([f"Znalost: {chunk}" for chunk in rag_context])
     if memory_context:
@@ -528,7 +632,15 @@ def ask_file():
         rag_context = [file_text] + rag_context
     debug_log.append(f"📚 Kontext z RAG: {len(rag_context)} výsledků")
 
-    prompt = f"Uživatel: {message}\n"
+    web_info = ""
+    if should_use_web_search(MODEL_NAME) and message:
+        web_info = search_and_scrape(message)
+        debug_log.append("🌐 Vyhledáno na webu")
+
+    prompt = ""
+    if web_info:
+        prompt += f"{web_info}\n\n"
+    prompt += f"Uživatel: {message}\n"
     if rag_context:
         prompt += "\n".join([f"Znalost: {chunk}" for chunk in rag_context])
     if memory_context:
