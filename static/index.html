@@ -310,7 +310,10 @@
 
       const formData = new FormData();
       formData.append("message", msg);
-      formData.append("private", document.getElementById('memory-private').checked);
+      formData.append(
+        "private",
+        document.getElementById('memory-private').checked ? '1' : '0'
+      );
       if (file) {
         formData.append("file", file);
       }
