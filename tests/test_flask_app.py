@@ -225,6 +225,25 @@ def test_ask_web_endpoint(client, monkeypatch):
     assert res.get_json()["response"] == "dummy"
 
 
+def test_ask_auto_web_search(client, monkeypatch):
+    import main
+    calls = []
+
+    def fake_search(q):
+        calls.append(q)
+        return "web"
+
+    monkeypatch.setattr(main, "search_and_scrape", fake_search)
+    monkeypatch.setattr(main, "should_use_web_search", lambda m: True)
+
+    res = client.post("/ask", json={"message": "hi"}, headers=_auth())
+    assert res.status_code == 200
+    assert calls
+    call = main._post_calls[-1][1]["json"]
+    prompt = call.get("prompt") or call["messages"][0]["content"]
+    assert "web" in prompt
+
+
 def test_memory_add(client):
     import main
     res = client.post(

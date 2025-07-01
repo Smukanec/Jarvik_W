@@ -162,6 +162,10 @@ ollama pull phi3:mini
 ollama pull zephyr
 ```
 
+Models such as Zephyr, Mistral or Jarvik Q4 automatically prepend information
+from `web.search()` when active. The selector in the web interface shows which
+models support web search.
+
 ### Switching models while running
 
 Jarvik can change models on the fly. Use the drop-down selector in the web
