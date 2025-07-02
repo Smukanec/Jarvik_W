@@ -439,6 +439,15 @@ root the web interface exposes a **Use DevLab** button. Toggle the button to
 send all requests to the configured URL instead of the local server. The current
 environment is shown next to the button.
 
+### 🧩 DevLab submodule
+
+Tento projekt obsahuje vývojový modul `DevLab` jako Git submodul.
+Po naklonování nezapomeň spustit:
+
+```bash
+git submodule update --init --recursive
+```
+
 ## GitHub Connector
 
 The helper module `tools/github_connector.py` provides basic GitHub
