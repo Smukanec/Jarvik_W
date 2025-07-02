@@ -407,6 +407,31 @@ ruff check .
 
 Run `ruff --fix` to automatically resolve simple issues.
 
+## Remote testing
+
+Use `tools/test_endpoint.py` to verify that a Jarvik server is reachable. The
+helper reads the target URL from the `JARVIK_URL` environment variable or from a
+`devlab_config.json` file containing a `url` field.
+
+```bash
+JARVIK_URL=http://example.com:8010 python -m tools.test_endpoint -m "ping"
+```
+
+Example `devlab_config.json`:
+
+```json
+{ "url": "http://example.com:8010" }
+```
+
+With this file present you can simply run:
+
+```bash
+python -m tools.test_endpoint --log flask.log
+```
+
+The script prints the HTTP response and, when `--log` is given, shows the last
+lines of the specified log file.
+
 ## GitHub Connector
 
 The helper module `tools/github_connector.py` provides basic GitHub
