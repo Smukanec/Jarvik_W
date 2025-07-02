@@ -52,8 +52,7 @@ available models to your `~/.bashrc` and reload the file. The `jarvik-start`
 alias launches the default OpenChat model.
 
 Knowledge files are loaded from the `knowledge/` folder at startup. Jarvik now
-loads only plain text (`.txt`) files by default. See `knowledge/sample.txt` for a
-minimal example of the expected structure. The `KnowledgeBase` class from
+loads only plain text (`.txt`) files by default. See `knowledge/sample.txt` for a minimal example of the expected structure. The `knowledge/` directory now contains topic-specific folders such as `technologie/`, `programovani/` or `historie/`. A new `_index.json` file lists these categories with short descriptions so the UI can present them to users. The `KnowledgeBase` class from
 `rag_engine.py` reads these files, splits them into paragraphs and indexes them
 with FAISS. Vector search relies on `sentence-transformers` and `faiss-cpu`
 listed in `requirements.txt`. Convert existing PDFs or DOCX documents using
