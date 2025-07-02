@@ -1,5 +1,8 @@
 import os
 import sys
+import pytest
+
+pytest.importorskip("git")
 from git import Repo
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
