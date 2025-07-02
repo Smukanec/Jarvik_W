@@ -76,6 +76,9 @@ def client(monkeypatch, tmp_path):
         {"user": "shared question", "jarvik": "shared answer"}
     ]
 
+    monkeypatch.setattr(main, "ANSWER_DIR", str(tmp_path / "answers"))
+    os.makedirs(main.ANSWER_DIR, exist_ok=True)
+
     def dummy_append(user_msg, ai_response, folder=main.DEFAULT_MEMORY_FOLDER):
         cache = main.memory_caches.setdefault(folder, [])
         cache.append({"user": user_msg, "jarvik": ai_response})
@@ -225,7 +228,27 @@ def test_public_memory_when_flag_false_file(client):
         headers=_auth(),
     )
     assert res.status_code == 200
+    data = res.get_json()
+    assert data["response"] == "dummy"
     assert main.memory_caches[main.DEFAULT_MEMORY_FOLDER][-1]["user"] == "pubf"
+
+
+def test_ask_file_save_creates_file(client):
+    import main, os
+    res = client.post(
+        "/ask_file",
+        data={"message": "save this", "save": "1"},
+        headers=_auth(),
+    )
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["response"] == "dummy"
+    assert "download_url" in data
+    fname = data["download_url"].split("/")[-1]
+    assert os.path.exists(os.path.join(main.ANSWER_DIR, fname))
+    entry = main.memory_caches["bob"][-1]
+    assert "odpověď uložena" in entry["user"]
+    assert entry["jarvik"] == ""
 
 
 def test_per_user_knowledge_folders(client):
