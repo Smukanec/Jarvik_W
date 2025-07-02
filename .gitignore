@@ -10,3 +10,4 @@ venv/
 memory/*.jsonl
 *.log
 *.log
+*.log
