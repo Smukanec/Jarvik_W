@@ -786,6 +786,34 @@ def knowledge_upload():
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
+    # Suggest a topic based on the uploaded text when none was provided
+    proposed_topic = topic
+    if not topic:
+        index_path = os.path.join(PUBLIC_KNOWLEDGE_FOLDER, "_index.json")
+        topics: list[str] = []
+        if os.path.exists(index_path):
+            try:
+                with open(index_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        topics = list(data.keys())
+                    elif isinstance(data, list):  # pragma: no cover - alternate format
+                        topics = [str(t) for t in data]
+            except Exception:  # pragma: no cover - ignore invalid index
+                topics = []
+
+        text_norm = _strip_diacritics(text.lower())
+        best_topic = None
+        best_score = 0
+        for t in topics:
+            words = t.replace("_", " ").split()
+            score = sum(text_norm.count(w) for w in words)
+            if score > best_score:
+                best_score = score
+                best_topic = t
+        if best_topic:
+            proposed_topic = best_topic
+
     target = PUBLIC_KNOWLEDGE_FOLDER
     if private and user:
         target = os.path.join(MEMORY_DIR, user.nick, "private_knowledge")
@@ -803,7 +831,7 @@ def knowledge_upload():
 
     meta = {
         "uploader": user.nick if user else "anonymous",
-        "proposed_topic": topic,
+        "proposed_topic": proposed_topic,
         "topic": topic,
         "status": "pending_approval" if not private else "private",
         "public": not private,
