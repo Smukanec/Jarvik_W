@@ -705,6 +705,8 @@ def delete_memory_entries():
 @require_auth
 def knowledge_search():
     query = request.args.get("q", "")
+    topics_param = request.args.get("topics")
+    topics = [t.strip() for t in topics_param.split(",") if t.strip()] if topics_param else None
     thresh_param = request.args.get("threshold") or request.args.get("t")
     try:
         thresh = float(thresh_param) if thresh_param is not None else RAG_THRESHOLD
@@ -714,6 +716,8 @@ def knowledge_search():
         return jsonify([])
     user: User | None = getattr(g, "current_user", None)
     kb = get_knowledge_base(user)
+    if topics:
+        kb = KnowledgeBase(kb.folders, model_name=kb.model_name, topics=topics)
     return jsonify(kb.search(query, threshold=thresh))
 
 

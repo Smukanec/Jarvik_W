@@ -122,6 +122,7 @@
   <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea><br>
   <input type="file" id="file"><br>
   <label><input type="checkbox" id="memory-private"> Soukromá</label><br>
+  <div id="topic-checkboxes"></div>
   <button onclick="ask()">Odeslat</button>
   <pre id="activity"></pre>
 
@@ -229,11 +230,26 @@
         if (!res.ok) return;
         const data = await res.json();
         const sel = document.getElementById('knowledge-topic');
-        if (!sel) return;
-        sel.appendChild(new Option('', ''));
-        Object.entries(data).forEach(([k, v]) => {
-          sel.appendChild(new Option(v, k));
-        });
+        if (sel) {
+          sel.appendChild(new Option('', ''));
+          Object.entries(data).forEach(([k, v]) => {
+            sel.appendChild(new Option(v, k));
+          });
+        }
+        const box = document.getElementById('topic-checkboxes');
+        if (box) {
+          box.textContent = '';
+          Object.entries(data).forEach(([k, v]) => {
+            const label = document.createElement('label');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = k;
+            label.appendChild(cb);
+            label.append(' ' + v);
+            box.appendChild(label);
+            box.appendChild(document.createTextNode(' '));
+          });
+        }
       } catch (e) {}
     }
 
@@ -350,8 +366,14 @@
 
       // try to load context for display
       try {
+        const selectedTopics = Array.from(
+          document.querySelectorAll('#topic-checkboxes input:checked')
+        ).map(cb => cb.value);
+        const topicParam = selectedTopics.length
+          ? '&topics=' + encodeURIComponent(selectedTopics.join(','))
+          : '';
         const ctxRes = await authFetch(
-          "/knowledge/search?q=" + encodeURIComponent(msg)
+          "/knowledge/search?q=" + encodeURIComponent(msg) + topicParam
         );
         if (ctxRes.ok) {
           const ctxData = await ctxRes.json();

@@ -97,7 +97,12 @@ def load_knowledge(folder: str) -> List[str]:
 class KnowledgeBase:
     """Manage loading and searching local knowledge files using FAISS."""
 
-    def __init__(self, folder: str | List[str], model_name: str | None = None):
+    def __init__(
+        self,
+        folder: str | List[str],
+        model_name: str | None = None,
+        topics: List[str] | None = None,
+    ):
         self.folders = [folder] if isinstance(folder, str) else list(folder)
         self.model_name = model_name or os.getenv(
             "RAG_MODEL", "paraphrase-multilingual-MiniLM-L12-v2"
@@ -108,14 +113,29 @@ class KnowledgeBase:
             self.model = None
         self.chunks: List[str] = []
         self.index: faiss.Index | None = None
-        self.reload()
+        self.topics: List[str] | None = topics
+        self.reload(topics)
 
     # ------------------------------------------------------------------
-    def reload(self) -> None:
-        """(Re)load knowledge files and rebuild the vector index."""
+    def reload(self, topics: List[str] | None = None) -> None:
+        """(Re)load knowledge files and rebuild the vector index.
+
+        If *topics* is provided, only subdirectories matching those topics
+        are loaded. Otherwise, only files directly in the folders are used.
+        """
+        if topics is not None:
+            self.topics = topics
+        topics = self.topics
+
         chunks: List[str] = []
         for folder in self.folders:
-            chunks.extend(_load_folder(folder))
+            if topics:
+                for topic in topics:
+                    sub = os.path.join(folder, topic)
+                    if os.path.isdir(sub):
+                        chunks.extend(_load_folder(sub))
+            else:
+                chunks.extend(_load_folder(folder))
         self.chunks = chunks
         if not VECTOR_SUPPORT or not chunks or self.model is None:
             self.index = None
