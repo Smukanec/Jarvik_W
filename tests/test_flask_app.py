@@ -580,6 +580,46 @@ def test_knowledge_upload_creates_meta(client, monkeypatch, tmp_path):
     assert meta["public"] is True
 
 
+def test_knowledge_upload_suggests_topic(client, monkeypatch, tmp_path):
+    import main
+    import os
+    import json
+
+    index = {"dogs": "d", "cats": "c"}
+    os.makedirs(tmp_path, exist_ok=True)
+    with open(os.path.join(tmp_path, "_index.json"), "w", encoding="utf-8") as f:
+        json.dump(index, f)
+
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+    called = []
+    main.knowledge.folder = str(tmp_path)
+
+    def fake_reload():
+        called.append(True)
+
+    main.knowledge.reload = fake_reload
+    data = {
+        "file": (io.BytesIO(b"dogs are great"), "info.txt"),
+        "private": "0",
+    }
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    assert called
+    fname = res.get_json()["file"]
+    meta_path = os.path.join(
+        tmp_path, os.path.splitext(fname)[0] + ".meta.json"
+    )
+    with open(meta_path, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+    assert meta["proposed_topic"] == "dogs"
+    assert meta["topic"] == ""
+
+
 def test_private_knowledge_upload_saves_to_memory(client, monkeypatch, tmp_path):
     import main
     import json
