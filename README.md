@@ -432,6 +432,13 @@ python -m tools.test_endpoint --log flask.log
 The script prints the HTTP response and, when `--log` is given, shows the last
 lines of the specified log file.
 
+## DevLab mode
+
+When a `devlab_config.json` file with a `url` field exists in the repository
+root the web interface exposes a **Use DevLab** button. Toggle the button to
+send all requests to the configured URL instead of the local server. The current
+environment is shown next to the button.
+
 ## GitHub Connector
 
 The helper module `tools/github_connector.py` provides basic GitHub
