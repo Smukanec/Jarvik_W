@@ -67,7 +67,8 @@ Conversation history is stored in `memory/`. The public log lives in
 `memory/public.jsonl` while authenticated users get their own
 `memory/<nick>/log.jsonl` file. Knowledge files reside in `knowledge/` and any
 `knowledge/<nick>` subfolders listed in `users.json` are loaded for that user in
-addition to the public files.
+addition to the public files. Set the `MEMORY_DIR` or `KNOWLEDGE_DIR`
+environment variables to override these default locations.
 
 The similarity threshold for vector search defaults to `0.7`. You can tweak how
 strictly queries match the knowledge base by setting the `RAG_THRESHOLD`

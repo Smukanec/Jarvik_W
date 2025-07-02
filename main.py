@@ -219,7 +219,7 @@ def require_auth(f):
     return wrapper
 
 # --- Memory handling ------------------------------------------------------
-MEMORY_DIR = os.path.join(BASE_DIR, "memory")
+MEMORY_DIR = os.getenv("MEMORY_DIR", os.path.join(BASE_DIR, "memory"))
 DEFAULT_MEMORY_FOLDER = "public"
 memory_caches: dict[str, list[dict]] = {}
 memory_locks: dict[str, FileLock] = {}
@@ -229,7 +229,8 @@ memory_locks: dict[str, FileLock] = {}
 app = Flask(__name__)
 
 # Načti znalosti při startu
-PUBLIC_KNOWLEDGE_FOLDER = os.path.join(BASE_DIR, "knowledge")
+KNOWLEDGE_DIR = os.getenv("KNOWLEDGE_DIR", os.path.join(BASE_DIR, "knowledge"))
+PUBLIC_KNOWLEDGE_FOLDER = KNOWLEDGE_DIR
 knowledge = KnowledgeBase(PUBLIC_KNOWLEDGE_FOLDER)
 user_knowledge: dict[str, KnowledgeBase] = {}
 print("✅ Znalosti načteny.")
