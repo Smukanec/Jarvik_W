@@ -3,6 +3,46 @@ if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+      let apiBase = '';
+      let devlabUrl = '';
+      let useDevlab = false;
+
+      function buildUrl(path) {
+        if (apiBase) {
+          const base = apiBase.replace(/\/$/, '');
+          return base + path;
+        }
+        return path;
+      }
+
+      function updateEnvDisplay() {
+        const info = document.getElementById('env-info');
+        const btn = document.getElementById('env-toggle');
+        if (!info || !btn) return;
+        info.textContent = useDevlab ? 'DevLab' : 'local';
+        btn.textContent = useDevlab ? 'Use Local' : 'Use DevLab';
+        btn.style.display = devlabUrl ? 'inline' : 'none';
+      }
+
+      function toggleEnv() {
+        if (!devlabUrl) return;
+        useDevlab = !useDevlab;
+        apiBase = useDevlab ? devlabUrl : '';
+        updateEnvDisplay();
+      }
+
+      async function initEnv() {
+        try {
+          const res = await fetch('/static/devlab_config.json');
+          if (res.ok) {
+            const cfg = await res.json();
+            if (cfg.url) {
+              devlabUrl = cfg.url;
+            }
+          }
+        } catch (e) {}
+        updateEnvDisplay();
+      }
       const MODEL_INFO = {
         'openchat': {
           label: 'OpenChat – chytrý AI asistent 🌐',
@@ -83,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
         options.headers = options.headers || {};
         if (token) options.headers['Authorization'] = 'Bearer ' + token;
         if (apiKey) options.headers['X-API-Key'] = apiKey;
-        return fetch(url, options);
+        return fetch(buildUrl(url), options);
       }
   
       async function loadModel() {
@@ -155,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const password = document.getElementById('password').value;
         apiKey = document.getElementById('apikey').value.trim();
         if (apiKey) localStorage.setItem('apiKey', apiKey);
-        const res = await fetch('/login', {
+        const res = await fetch(buildUrl('/login'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nick, password })
@@ -427,6 +467,8 @@ document.addEventListener('DOMContentLoaded', () => {
           ask();
         }
       });
+      window.toggleEnv = toggleEnv;
+      initEnv();
       checkAuth();
 });
 

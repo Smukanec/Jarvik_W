@@ -77,6 +77,9 @@
       font-weight: bold;
       margin-bottom: 0.5em;
     }
+    #env-switch {
+      margin: 0.5em 0;
+    }
     #feedback button {
       margin-right: 0.5em;
     }
@@ -108,6 +111,11 @@
   <button onclick="switchModel()">Switch model</button>
   <p id="model-desc"></p>
   <pre id="model-status"></pre>
+
+  <div id="env-switch">
+    Environment: <span id="env-info">local</span>
+    <button id="env-toggle" onclick="toggleEnv()" style="display:none">Use DevLab</button>
+  </div>
 
   <pre id="token-display"></pre>
   <button onclick="copyToken()">Copy token</button>
