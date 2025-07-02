@@ -5,4 +5,5 @@ duckduckgo-search>=8.0
 beautifulsoup4
 sentence-transformers
 faiss-cpu
+GitPython
 
