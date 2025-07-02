@@ -407,6 +407,23 @@ ruff check .
 
 Run `ruff --fix` to automatically resolve simple issues.
 
+## GitHub Connector
+
+The helper module `tools/github_connector.py` provides basic GitHub
+automation. Configure the repository URL and authentication token to
+clone or update a repository, inspect diffs or commit history, and push
+changes. Pull requests can be opened either via the `GitPython` library
+or the optional `gh` CLI.
+
+Set the following environment variables or pass them directly to the
+functions:
+
+- `GITHUB_REPO_URL` – HTTPS address of the repository.
+- `GITHUB_TOKEN` – personal access token with repo permissions.
+
+Install the extra dependency `GitPython` and optionally the `gh` CLI if
+you prefer using it for authentication and PR creation.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
