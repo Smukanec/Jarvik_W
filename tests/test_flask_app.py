@@ -247,8 +247,8 @@ def test_ask_file_save_creates_file(client):
     fname = data["download_url"].split("/")[-1]
     assert os.path.exists(os.path.join(main.ANSWER_DIR, fname))
     entry = main.memory_caches["bob"][-1]
-    assert "odpověď uložena" in entry["user"]
-    assert entry["jarvik"] == ""
+    assert entry["user"] == "save this"
+    assert "odpověď uložena" in entry["jarvik"]
 
 
 def test_per_user_knowledge_folders(client):

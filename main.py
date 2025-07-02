@@ -646,11 +646,13 @@ def ask_file():
             with open(out_path, "w", encoding="utf-8") as f:
                 f.write(output)
             download_url = url_for("download_answer", filename=out_name)
-            append_to_memory(
-                f"Dotaz se týkal souboru {uploaded.filename}. Odpověď uložena jako {out_name}",
-                "",
-                folder=target_folder,
+            note = (
+                f"Odpověď uložena jako {out_name}"
+                + (
+                    f" (soubor {uploaded.filename})" if uploaded and uploaded.filename else ""
+                )
             )
+            append_to_memory(message, note, folder=target_folder)
         except Exception as e:
             debug_log.append(f"Chyba při vytváření souboru: {e}")
             append_to_memory(message, output, folder=target_folder)
