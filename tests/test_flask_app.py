@@ -13,12 +13,20 @@ import rag_engine
 
 
 class DummyKB:
-    def __init__(self, folder=None):
-        self.folder = folder
-        self.chunks = ["dummy"]
+    last_topics = None
 
-    def reload(self):
-        pass
+    def __init__(self, folder=None, model_name=None, topics=None):
+        self.folder = folder
+        self.model_name = model_name
+        self.folders = [folder] if folder and not isinstance(folder, list) else folder
+        self.chunks = ["dummy"]
+        self.topics = topics
+        DummyKB.last_topics = topics
+
+    def reload(self, topics=None):
+        DummyKB.last_topics = topics
+        if topics is not None:
+            self.topics = topics
 
     def search(self, query, threshold=None):
         return [f"kb:{query}"]
@@ -164,6 +172,17 @@ def test_knowledge_search(client):
     res = client.get("/knowledge/search", headers=_auth())
     assert res.status_code == 200
     assert res.get_json() == []
+
+
+def test_knowledge_search_topics(client):
+    DummyKB.last_topics = None
+    res = client.get(
+        "/knowledge/search",
+        query_string={"q": "x", "topics": "t1,t2"},
+        headers=_auth(),
+    )
+    assert res.status_code == 200
+    assert DummyKB.last_topics == ["t1", "t2"]
 
 
 def test_login_and_token(client):
@@ -632,7 +651,6 @@ def test_knowledge_pending_and_approve(client, monkeypatch, tmp_path):
 
 def test_knowledge_reject_moves_file(client, monkeypatch, tmp_path):
     import main
-    import os
     import json
 
     pub = tmp_path / "pub"
