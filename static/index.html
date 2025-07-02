@@ -1,193 +1,41 @@
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-  <meta charset="UTF-8">
-  <title>Jarvik</title>
-  <style>
-    body {
-      font-family: monospace;
-      background-color: #121212;
-      margin: 2em;
-      color: #c8f6c8;
+<script>
+  async function uploadKnowledge() {
+    const fileInput = document.getElementById("knowledge-file");
+    const file = fileInput.files[0];
+    if (!file) {
+      document.getElementById("knowledge-status").textContent = "❌ Vyber soubor.";
+      return;
     }
-    img {
-      max-height: 100px;
-      margin-bottom: 1em;
-    }
-    textarea {
-      width: 100%;
-      padding: 1em;
-      font-size: 1em;
-      border: 2px solid #00ff00;
-      border-radius: 8px;
-      background-color: #1e1e1e;
-      color: #c8f6c8;
-    }
-    button {
-      background-color: #00aa00;
-      color: white;
-      border: none;
-      padding: 0.8em 1.5em;
-      font-size: 1em;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 0.5em;
-    }
-    button:hover {
-      background-color: #007700;
-    }
-    pre {
-      background-color: #1e1e1e;
-      border: 1px solid #2e7d32;
-      padding: 1em;
-      border-radius: 8px;
-      margin-top: 1em;
-      color: #c8f6c8;
-      white-space: pre-wrap;
-      word-break: break-word;
-      text-align: left;
-    }
-    #panels {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1em;
-    }
-    .panel {
-      flex: 1 1 30%;
-      min-width: 250px;
-    }
-    #response-panel {
-      flex: 1 1 70%;
-    }
-    #response {
-      min-height: 300px;
-    }
-    details summary {
-      cursor: pointer;
-      font-weight: bold;
-      color: #00ff00;
-      margin-top: 1em;
-    }
-    #log, #status, #debug, #activity {
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    #current-model-display {
-      font-size: 1.2em;
-      font-weight: bold;
-      margin-bottom: 0.5em;
-    }
-    #env-switch {
-      margin: 0.5em 0;
-    }
-    #feedback button {
-      margin-right: 0.5em;
-    }
-    #correction {
-      margin-top: 0.5em;
-    }
-  </style>
-</head>
-<body>
-  <img src="/static/alternativ.png" alt="Jarvik logo">
 
-  <div id="login" style="display:none">
-    <input id="nick" placeholder="nick"><br>
-    <input id="password" type="password" placeholder="password"><br>
-    <input id="apikey" placeholder="API key (optional)"><br>
-    <button onclick="doLogin()">Login</button>
-    <pre id="login-status"></pre>
-  </div>
+    const isPrivate = document.getElementById("knowledge-private").checked;
+    const description = document.getElementById("knowledge-desc").value;
+    const topicSelect = document.getElementById("knowledge-topic");
+    const topic = topicSelect.value || "";
 
-  <div id="interface" style="display:none">
-  <h2 id="current-model-display">Running model: <span id="current-model">?</span></h2>
-  <select id="model-select">
-    <option value="openchat" title="Chytrý AI asistent. Vhodný pro běžné otázky, dialog a porozumění pokynům.">OpenChat – chytrý AI asistent 🌐</option>
-    <option value="llama3:8b" title="Vysoká přesnost, vhodný pro složitější dotazy, rozumí webovému obsahu i dokumentům.">LLaMA 3 8B – velký jazykový model 🌐</option>
-    <option value="nous-hermes2" title="Dobře zvládá otázky, formální texty i instrukce, vhodný i pro složitější dotazy s doplněním z internetu.">Nous Hermes 2 – jemně doladěný Mistral 🌐</option>
-    <option value="command-r" title="Optimalizovaný pro programování, Python, shell, kódové úkoly.">Command R – model pro RAG 🌐</option>
-    <option value="api" title="Externí API – dotazy jsou posílány do API.">Externí API</option>
-  </select>
-  <button onclick="switchModel()">Switch model</button>
-  <p id="model-desc"></p>
-  <pre id="model-status"></pre>
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("private", isPrivate ? "true" : "false");
+    formData.append("description", description);
+    formData.append("topic", topic);
 
-  <div id="env-switch">
-    Environment: <span id="env-info">local</span>
-    <button id="env-toggle" onclick="toggleEnv()" style="display:none">Use DevLab</button>
-  </div>
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch("/knowledge/upload", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + token
+        },
+        body: formData
+      });
 
-  <pre id="token-display"></pre>
-  <button onclick="copyToken()">Copy token</button>
-
-  <p id="intro">Napiš dotaz nebo přilož soubor a klikni na <strong>Odeslat</strong>.</p>
-
-  <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea><br>
-  <input type="file" id="file"><br>
-  <label><input type="checkbox" id="save-txt"> Uložit odpověď do txt</label><br>
-  <label><input type="checkbox" id="memory-private"> Soukromá</label><br>
-  <div id="topic-checkboxes"></div>
-  <button onclick="ask()">Odeslat</button>
-  <pre id="activity"></pre>
-
-  <div id="panels">
-    <div class="panel" id="response-panel">
-      <h3>🤖 Odpověď</h3>
-      <pre id="response"></pre>
-      <a id="download" style="display:none" href="#">⬇️ Stáhnout odpověď</a>
-      <div id="feedback" style="display:none">
-        <button onclick="sendFeedback('good')">👍</button>
-        <button onclick="sendFeedback('bad')">👎</button>
-        <button onclick="showCorrection()">✏️ Opravit</button>
-        <div id="correction" style="display:none">
-          <textarea id="correction-text" rows="3" placeholder="Navržená odpověď…"></textarea>
-          <button onclick="submitCorrection()">Odeslat</button>
-        </div>
-        <pre id="feedback-status"></pre>
-      </div>
-    </div>
-    <div class="panel">
-      <details>
-        <summary>📖 Kontext</summary>
-        <pre id="context"></pre>
-      </details>
-    </div>
-    <div class="panel">
-      <h3>🧪 Debug</h3>
-      <pre id="debug"></pre>
-    </div>
-  </div>
-
-  <details>
-    <summary>🕘 Historie</summary>
-    <pre id="log"></pre>
-  </details>
-
-  <h3>📊 Stav</h3>
-  <pre id="status">🟢 Připraven.</pre>
-  <pre id="duration"></pre>
-
-  <h3>➕ Přidat znalost</h3>
-  <input type="file" id="knowledge-file"><br>
-  <label><input type="checkbox" id="knowledge-private"> Soukromá</label><br>
-  <select id="knowledge-topic"></select><br>
-  <input id="knowledge-desc" placeholder="Popis souboru"><br>
-  <button onclick="uploadKnowledge()">Nahrát</button>
-  <pre id="knowledge-status"></pre>
-
-  <h3>📥 Ke schválení</h3>
-  <ul id="pending-list"></ul>
-  <button onclick="loadPending()">Obnovit</button>
-
-  <h3>🧹 Smazat paměť</h3>
-  <label>Od: <input type="datetime-local" id="delete-from"></label><br>
-  <label>Do: <input type="datetime-local" id="delete-to"></label><br>
-  <button onclick="deleteByTime()">Smazat rozsah</button><br>
-  <input id="delete-keyword" placeholder="Klíčové slovo"><br>
-  <button onclick="deleteByKeyword()">Smazat podle slova</button>
-  <pre id="delete-status"></pre>
-
-  <script src="/static/app.js"></script>
-  </div>
-</body>
-</html>
+      const data = await res.json();
+      if (data.status === "saved") {
+        document.getElementById("knowledge-status").textContent = `✅ Soubor uložen jako: ${data.file}`;
+      } else {
+        document.getElementById("knowledge-status").textContent = "❌ Chyba: " + JSON.stringify(data);
+      }
+    } catch (err) {
+      document.getElementById("knowledge-status").textContent = "❌ Výjimka: " + err;
+    }
+  }
+</script>
