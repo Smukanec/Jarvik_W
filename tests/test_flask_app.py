@@ -234,6 +234,7 @@ def test_per_user_knowledge_folders(client):
     kb = main.user_knowledge["bob"]
     assert main.PUBLIC_KNOWLEDGE_FOLDER in kb.folder[0]
     assert os.path.join(main.PUBLIC_KNOWLEDGE_FOLDER, "private") in kb.folder[1]
+    assert os.path.join(main.MEMORY_DIR, "bob", "private_knowledge") in kb.folder[2]
 
 
 def test_ask_web_endpoint(client, monkeypatch):
@@ -554,6 +555,37 @@ def test_knowledge_upload_creates_meta(client, monkeypatch, tmp_path):
     assert meta["topic"] == "technologie"
     assert meta["status"] == "pending_approval"
     assert meta["public"] is True
+
+
+def test_private_knowledge_upload_saves_to_memory(client, monkeypatch, tmp_path):
+    import main
+    import json
+
+    pub = tmp_path / "pub"
+    pub.mkdir()
+    mem = tmp_path / "mem"
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(pub))
+    monkeypatch.setattr(main, "MEMORY_DIR", str(mem))
+    main.knowledge.folder = str(pub)
+    main.knowledge.reload = lambda: None
+
+    data = {"file": (io.BytesIO(b"hello"), "priv.txt"), "private": "1"}
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    fname = res.get_json()["file"]
+
+    dest_file = mem / "bob" / "private_knowledge" / fname
+    dest_meta = dest_file.with_suffix(".meta.json")
+    assert dest_file.exists()
+    assert dest_meta.exists()
+    with open(dest_meta, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+    assert meta["status"] == "private"
 
 
 def test_knowledge_topics(client, monkeypatch, tmp_path):

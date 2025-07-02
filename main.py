@@ -243,6 +243,7 @@ def get_knowledge_base(user: User | None) -> KnowledgeBase:
         folders = [PUBLIC_KNOWLEDGE_FOLDER]
         for sub in user.knowledge_folders:
             folders.append(os.path.join(PUBLIC_KNOWLEDGE_FOLDER, sub))
+        folders.append(os.path.join(MEMORY_DIR, user.nick, "private_knowledge"))
         kb = KnowledgeBase(folders)
         user_knowledge[user.nick] = kb
     return kb
@@ -773,7 +774,7 @@ def knowledge_upload():
 
     target = PUBLIC_KNOWLEDGE_FOLDER
     if private and user:
-        target = os.path.join(target, user.nick)
+        target = os.path.join(MEMORY_DIR, user.nick, "private_knowledge")
     os.makedirs(target, exist_ok=True)
     base = os.path.splitext(filename)[0]
     name = f"{base}.txt"
