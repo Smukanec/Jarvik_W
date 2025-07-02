@@ -1,4 +1,12 @@
-from flask import Flask, request, jsonify, send_file, after_this_request, g
+from flask import (
+    Flask,
+    request,
+    jsonify,
+    send_file,
+    after_this_request,
+    g,
+    url_for,
+)
 from werkzeug.utils import secure_filename
 from memory import vymazat_memory_range
 from rag_engine import (
@@ -223,6 +231,7 @@ MEMORY_DIR = os.getenv("MEMORY_DIR", os.path.join(BASE_DIR, "memory"))
 DEFAULT_MEMORY_FOLDER = "public"
 memory_caches: dict[str, list[dict]] = {}
 memory_locks: dict[str, FileLock] = {}
+ANSWER_DIR = os.getenv("ANSWER_DIR", os.path.join(BASE_DIR, "answers"))
 
 # Jarvik keeps conversation history indefinitely.
 
@@ -626,40 +635,44 @@ def ask_file():
 
     private = request.form.get("private", "true").lower() in {"1", "true", "yes"}
     target_folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
-    append_to_memory(message, output, folder=target_folder)
 
-    if ext == ".txt":
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp_out:
-            out_path = tmp_out.name
+    save = request.form.get("save")
+    download_url = None
+    if save:
+        os.makedirs(ANSWER_DIR, exist_ok=True)
+        out_name = f"{secrets.token_hex(8)}.txt"
+        out_path = os.path.join(ANSWER_DIR, out_name)
         try:
             with open(out_path, "w", encoding="utf-8") as f:
                 f.write(output)
+            download_url = url_for("download_answer", filename=out_name)
+            note = (
+                f"Odpověď uložena jako {out_name}"
+                + (
+                    f" (soubor {uploaded.filename})" if uploaded and uploaded.filename else ""
+                )
+            )
+            append_to_memory(message, note, folder=target_folder)
         except Exception as e:
             debug_log.append(f"Chyba při vytváření souboru: {e}")
-            os.unlink(out_path)
-            return jsonify({"response": output, "debug": debug_log})
+            append_to_memory(message, output, folder=target_folder)
+    else:
+        append_to_memory(message, output, folder=target_folder)
 
-        @after_this_request
-        def cleanup(resp):
-            try:
-                os.unlink(out_path)
-            except Exception:
-                pass
-            return resp
+    resp = {"response": output, "debug": debug_log}
+    if download_url:
+        resp["download_url"] = download_url
+    return jsonify(resp)
 
-        try:
-            resp = send_file(
-                out_path, as_attachment=True, download_name=f"odpoved{ext}"
-            )
-        except TypeError:  # Flask < 2.0 uses attachment_filename
-            resp = send_file(
-                out_path, as_attachment=True, attachment_filename=f"odpoved{ext}"
-            )
-        resp.headers["X-Answer"] = output
-        resp.headers["X-Debug"] = json.dumps(debug_log)
-        return resp
 
-    return jsonify({"response": output, "debug": debug_log})
+@app.route("/answers/<path:filename>")
+@require_auth
+def download_answer(filename: str):
+    """Serve generated answer files."""
+    path = os.path.join(ANSWER_DIR, filename)
+    if not os.path.exists(path):
+        return jsonify({"error": "not found"}), 404
+    return send_file(path, as_attachment=True, download_name=filename)
 
 @app.route("/memory/add", methods=["POST"])
 @require_auth

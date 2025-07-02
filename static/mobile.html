@@ -79,12 +79,15 @@
     <button onclick="switchModel()">Switch model</button>
 
     <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea><br>
+    <input type="file" id="file"><br>
+    <label><input type="checkbox" id="save-txt"> Uložit odpověď do txt</label><br>
     <label><input type="radio" name="mem" id="mem-private" value="1" checked> Soukromá</label>
     <label><input type="radio" name="mem" value="0"> Veřejná</label><br>
     <button onclick="ask()">Odeslat</button>
     <div id="spinner" style="display:none">⏳</div>
 
     <pre id="response"></pre>
+    <a id="download" style="display:none" href="#">⬇️ Stáhnout odpověď</a>
     <details>
       <summary>📖 Kontext</summary>
       <pre id="context"></pre>
@@ -223,9 +226,12 @@ async function doLogin() {
 
 async function ask() {
   const msg = document.getElementById('message').value.trim();
-  if (!msg) return;
+  const fileInput = document.getElementById('file');
+  const file = fileInput.files[0];
+  if (!msg && !file) return;
   document.getElementById('spinner').style.display = 'block';
   document.getElementById('response').textContent = '';
+  document.getElementById('download').style.display = 'none';
   try {
     const ctxRes = await authFetch('/knowledge/search?q=' + encodeURIComponent(msg));
     if (ctxRes.ok) {
@@ -238,22 +244,58 @@ async function ask() {
   } catch (e) {
     document.getElementById('context').textContent = '❌ Kontext se nepodařilo načíst';
   }
-  const res = await authFetch('/ask', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message: msg,
-      private: document.getElementById('mem-private').checked
-    })
-  });
-  if (res.ok) {
+  const formData = new FormData();
+  formData.append('message', msg);
+  formData.append('private', document.getElementById('mem-private').checked ? '1' : '0');
+  if (file) formData.append('file', file);
+  if (document.getElementById('save-txt').checked) formData.append('save', '1');
+
+  let res;
+  try {
+    res = await authFetch('/ask_file', { method: 'POST', body: formData });
+  } catch (e) {
+    document.getElementById('response').textContent = '❌ Chyba při odesílání';
+    document.getElementById('spinner').style.display = 'none';
+    return;
+  }
+
+  const contentType = res.headers.get('Content-Type') || '';
+
+  if (!res.ok) {
+    let errText = res.statusText || `HTTP ${res.status}`;
+    if (contentType.includes('application/json')) {
+      const data = await res.json();
+      errText = data.error || errText;
+    }
+    document.getElementById('response').textContent = `❌ ${errText}`;
+  } else if (contentType.includes('application/json')) {
     const data = await res.json();
     document.getElementById('response').textContent = data.response || '❌ Chyba odpovědi';
+    const link = document.getElementById('download');
+    if (data.download_url) {
+      link.href = data.download_url;
+      link.textContent = '⬇️ Stáhnout odpověď';
+      link.style.display = 'inline';
+    }
   } else {
-    document.getElementById('response').textContent = '❌ Chyba';
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const answer = res.headers.get('X-Answer') || '';
+    document.getElementById('response').textContent = answer || '❌ Chyba odpovědi';
+    const disposition = res.headers.get('Content-Disposition') || '';
+    let filename = 'response';
+    const m = disposition.match(/filename="?([^";]+)"?/);
+    if (m) filename = m[1];
+    const link = document.getElementById('download');
+    link.href = url;
+    link.download = filename;
+    link.textContent = `⬇️ ${filename}`;
+    link.style.display = 'inline';
   }
+
   document.getElementById('spinner').style.display = 'none';
   document.getElementById('message').value = '';
+  fileInput.value = '';
 }
 
 document.getElementById('message').addEventListener('keydown', function(e) {
