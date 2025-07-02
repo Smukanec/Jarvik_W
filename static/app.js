@@ -261,6 +261,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (file) {
           formData.append("file", file);
         }
+        if (document.getElementById('save-txt').checked) {
+          formData.append('save', '1');
+        }
   
         let res;
         try {
@@ -296,7 +299,14 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById("response").textContent = data.response || "❌ Chyba odpovědi";
           document.getElementById("debug").textContent = data.debug ? data.debug.join("\n") : "(žádný debug)";
           conversationLog += `[${timestamp}] 👤 ${msg}\n[${timestamp}] 🤖 ${data.response}\n\n`;
-          document.getElementById("download").style.display = "none";
+          const link = document.getElementById("download");
+          if (data.download_url) {
+            link.href = data.download_url;
+            link.textContent = "⬇️ Stáhnout odpověď";
+            link.style.display = "inline";
+          } else {
+            link.style.display = "none";
+          }
           document.getElementById('feedback').style.display = 'block';
         } else {
           const blob = await res.blob();
