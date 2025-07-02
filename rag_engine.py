@@ -1,6 +1,5 @@
 import os
 import glob
-import os
 import re
 import unicodedata
 import difflib

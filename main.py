@@ -254,7 +254,7 @@ def _ensure_memory(folder: str) -> tuple[str, FileLock]:
     """Return the memory log path and lock for *folder*.
 
     The ``public`` folder maps to ``memory/public.jsonl`` while any other
-    name creates ``memory/<name>/private.jsonl``. This keeps user history
+    name creates ``memory/<name>/log.jsonl``. This keeps user history
     separate from the shared public memory.
     """
 
@@ -262,7 +262,7 @@ def _ensure_memory(folder: str) -> tuple[str, FileLock]:
         path = os.path.join(MEMORY_DIR, "public.jsonl")
         lock_key = DEFAULT_MEMORY_FOLDER
     else:
-        path = os.path.join(MEMORY_DIR, folder, "private.jsonl")
+        path = os.path.join(MEMORY_DIR, folder, "log.jsonl")
         lock_key = folder
 
     if lock_key not in memory_locks:
@@ -391,7 +391,7 @@ def search_memory(query, memory_entries):
 
 def get_corrections(nick: str, query: str, threshold: float = 0.7) -> list[str]:
     """Return feedback corrections for *nick* similar to *query*."""
-    path = os.path.join(MEMORY_DIR, nick, "private.jsonl")
+    path = os.path.join(MEMORY_DIR, nick, "log.jsonl")
     if not os.path.exists(path):
         return []
 
@@ -958,7 +958,7 @@ def feedback():
         if user:
             folder = os.path.join(MEMORY_DIR, user.nick)
             os.makedirs(folder, exist_ok=True)
-            path = os.path.join(folder, "private.jsonl")
+            path = os.path.join(folder, "log.jsonl")
             entry = {
                 "type": "feedback",
                 "agree": agree,

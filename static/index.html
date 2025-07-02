@@ -57,7 +57,7 @@
       min-width: 250px;
     }
     #response-panel {
-      flex: 2 1 60%;
+      flex: 1 1 70%;
     }
     #response {
       min-height: 300px;
@@ -76,6 +76,9 @@
       font-size: 1.2em;
       font-weight: bold;
       margin-bottom: 0.5em;
+    }
+    #env-switch {
+      margin: 0.5em 0;
     }
     #feedback button {
       margin-right: 0.5em;
@@ -109,6 +112,11 @@
   <p id="model-desc"></p>
   <pre id="model-status"></pre>
 
+  <div id="env-switch">
+    Environment: <span id="env-info">local</span>
+    <button id="env-toggle" onclick="toggleEnv()" style="display:none">Use DevLab</button>
+  </div>
+
   <pre id="token-display"></pre>
   <button onclick="copyToken()">Copy token</button>
 
@@ -122,12 +130,6 @@
   <pre id="activity"></pre>
 
   <div id="panels">
-    <div class="panel">
-      <details>
-        <summary>📖 Kontext</summary>
-        <pre id="context"></pre>
-      </details>
-    </div>
     <div class="panel" id="response-panel">
       <h3>🤖 Odpověď</h3>
       <pre id="response"></pre>
@@ -142,6 +144,12 @@
         </div>
         <pre id="feedback-status"></pre>
       </div>
+    </div>
+    <div class="panel">
+      <details>
+        <summary>📖 Kontext</summary>
+        <pre id="context"></pre>
+      </details>
     </div>
     <div class="panel">
       <h3>🧪 Debug</h3>

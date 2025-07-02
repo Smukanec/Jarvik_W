@@ -319,7 +319,7 @@ def test_feedback_endpoint(client):
     import os
     import json
 
-    fb_path = os.path.join(main.MEMORY_DIR, "bob", "private.jsonl")
+    fb_path = os.path.join(main.MEMORY_DIR, "bob", "log.jsonl")
     if os.path.exists(fb_path):
         os.unlink(fb_path)
 
@@ -355,7 +355,7 @@ def test_feedback_entry_written(client):
     import os
     import json
 
-    fb_path = os.path.join(main.MEMORY_DIR, "bob", "private.jsonl")
+    fb_path = os.path.join(main.MEMORY_DIR, "bob", "log.jsonl")
     if os.path.exists(fb_path):
         os.unlink(fb_path)
 
@@ -384,7 +384,7 @@ def test_get_corrections_and_prompt_notes(client):
     import os
     import json
 
-    fb_path = os.path.join(main.MEMORY_DIR, "bob", "private.jsonl")
+    fb_path = os.path.join(main.MEMORY_DIR, "bob", "log.jsonl")
     os.makedirs(os.path.dirname(fb_path), exist_ok=True)
     with open(fb_path, "w", encoding="utf-8") as f:
         f.write(json.dumps({"original_question": "hi", "correction": "answer"}) + "\n")
@@ -413,13 +413,13 @@ def test_prompt_notes_with_mocked_file_and_similarity(client, monkeypatch):
     real_open = builtins.open
 
     def fake_open(path, mode="r", *args, **kwargs):
-        if path.endswith("private.jsonl") and "r" in mode:
+        if path.endswith("log.jsonl") and "r" in mode:
             open_calls.append(path)
             return io.StringIO(file_data)
         return real_open(path, mode, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "open", fake_open)
-    monkeypatch.setattr(main.os.path, "exists", lambda p: True if p.endswith("private.jsonl") else os.path.exists(p))
+    monkeypatch.setattr(main.os.path, "exists", lambda p: True if p.endswith("log.jsonl") else os.path.exists(p))
 
     class DummyMatcher:
         def __init__(self, *args, **kwargs):

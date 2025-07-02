@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -61,4 +60,4 @@ def test_invalid_json_lines_kept(tmp_path):
 
     assert "{bad json}" in lines
     assert len(lines) == 2
-    assert all("delete" not in l for l in lines)
+    assert all("delete" not in line for line in lines)
