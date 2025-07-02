@@ -1,7 +1,7 @@
 # Jarvik
 
-This repository contains scripts to run the Jarvik assistant locally. Gemma 2B
-from Ollama is the default model used by all helper scripts. You can switch
+This repository contains scripts to run the Jarvik assistant locally. OpenChat
+is the default model used by all helper scripts. You can switch
 models at any time via the web interface or by calling the `/model` endpoint.
 Alternatively set the `MODEL_NAME` environment variable when starting a script
 to run a different model. Jarvik keeps the entire conversation history by
@@ -47,13 +47,12 @@ bash load.sh
 ```
 
 This will append alias commands such as `jarvik-start`, `jarvik-status`,
-`jarvik-model`, `jarvik-flask`, `jarvik-ollama`, `jarvik-start-7b` and
-`jarvik-start-q4` to your `~/.bashrc` and reload the file. The `jarvik-start`
-alias launches the default Gemma 2B model.
+`jarvik-model`, `jarvik-flask`, `jarvik-ollama` and wrappers for the
+available models to your `~/.bashrc` and reload the file. The `jarvik-start`
+alias launches the default OpenChat model.
 
 Knowledge files are loaded from the `knowledge/` folder at startup. Jarvik now
-loads only plain text (`.txt`) files by default. See `knowledge/sample.txt` for a
-minimal example of the expected structure. The `KnowledgeBase` class from
+loads only plain text (`.txt`) files by default. See `knowledge/sample.txt` for a minimal example of the expected structure. The `knowledge/` directory now contains topic-specific folders such as `technologie/`, `programovani/` or `historie/`. A new `_index.json` file lists these categories with short descriptions so the UI can present them to users. The `KnowledgeBase` class from
 `rag_engine.py` reads these files, splits them into paragraphs and indexes them
 with FAISS. Vector search relies on `sentence-transformers` and `faiss-cpu`
 listed in `requirements.txt`. Convert existing PDFs or DOCX documents using
@@ -68,7 +67,8 @@ Conversation history is stored in `memory/`. The public log lives in
 `memory/public.jsonl` while authenticated users get their own
 `memory/<nick>/log.jsonl` file. Knowledge files reside in `knowledge/` and any
 `knowledge/<nick>` subfolders listed in `users.json` are loaded for that user in
-addition to the public files.
+addition to the public files. Set the `MEMORY_DIR` or `KNOWLEDGE_DIR`
+environment variables to override these default locations.
 
 The similarity threshold for vector search defaults to `0.7`. You can tweak how
 strictly queries match the knowledge base by setting the `RAG_THRESHOLD`
@@ -89,7 +89,7 @@ bash start_jarvik.sh
 ```
 
 The script checks for required commands and automatically downloads the
-`gemma:2b` model if it is missing. Po spuštění vypíše, zda se všechny části
+`openchat` model if it is missing. Po spuštění vypíše, zda se všechny části
 správně nastartovaly, případné chyby hledejte v souborech `*.log`.
 With the aliases loaded you can simply type:
 
@@ -104,66 +104,47 @@ The Flask API will query whichever model is specified. To start Jarvik with any
 model simply set the variable when invoking the script. For example:
 
 ```bash
-MODEL_NAME="mistral:7b-Q4_K_M" bash start_jarvik.sh
+MODEL_NAME="llama3:8b" bash start_jarvik.sh
 ```
 Alternatively you can run the dedicated wrapper scripts:
 
 ```bash
 # Default model
-bash start_gemma_2b.sh
+bash start_openchat.sh
 # or using the alias
 jarvik-start
 
-# Mistral 7B model
-bash start_mistral_7b.sh
-# or using the alias
-jarvik-start-7b
-# (available after running `bash load.sh`)
+# LLaMA 3 8B model
+bash start_llama3_8b.sh
+
+# Command R model
+bash start_command_r.sh
+
+# Nous Hermes 2 model
+bash start_nous_hermes2.sh
+
+# External API
+MODEL_NAME=api bash start_jarvik.sh
 ```
 
 Switching models is seamless because each wrapper calls `switch_model.sh` to
 restart with the selected model. Any running model or Flask instance is
 replaced automatically.
 
-Another helper script starts a pre-quantized Q4 model:
-
-```bash
-bash start_jarvik_q4.sh
-# or using the alias
-jarvik-start-q4
-# (available after running `bash load.sh`)
-```
-
-Additional wrappers are available for other models:
-
-```bash
-bash start_llama3_8b.sh      # llama3:8b
-bash start_command_r.sh      # command-r
-bash start_deepseek_coder.sh # deepseek-coder
-bash start_nous_hermes2.sh   # nous-hermes2
-bash start_phi3_mini.sh      # phi3:mini
-bash start_zephyr.sh         # zephyr
-```
-
 ## Supported Models
 
-All scripts assume the Gemma 2B model by default, but Jarvik includes wrappers
-for several others. Pull them with `ollama pull` before first use:
+Jarvik supports a handful of local models plus an optional external API. Pull
+them with `ollama pull` before first use:
 
 ```
-ollama pull gemma:2b
-ollama pull mistral:7b-Q4_K_M
-ollama pull jarvik-q4
+ollama pull openchat
 ollama pull llama3:8b
 ollama pull command-r
-ollama pull deepseek-coder
 ollama pull nous-hermes2
-ollama pull phi3:mini
-ollama pull zephyr
 ```
 
-Models such as Zephyr, Mistral or Jarvik Q4 automatically prepend information
-from `web.search()` when active. The selector in the web interface shows which
+Models marked with a globe icon automatically prepend information from
+`web.search()` when active. The selector in the web interface shows which
 models support web search.
 
 ### Switching models while running
@@ -173,19 +154,18 @@ interface or send a POST request to `/model` with `{"model": "name"}`. The same
 action is available from the shell via `switch_model.sh`:
 
 ```bash
-bash switch_model.sh mistral:7b-Q4_K_M
+bash switch_model.sh openchat
 ```
 
 The application restarts with the new model.
 
 ### Offline usage
 
-If you need to run without internet access, first download the model file (for
-example using `stahni-mistral-q4.sh`). Create a `Modelfile` that references the
-downloaded `.gguf` file and register it with:
+If you need to run without internet access, first download the model file. Create
+a `Modelfile` that references the downloaded `.gguf` file and register it with:
 
 ```bash
-ollama create mistral:7b-Q4_K_M -f Modelfile
+ollama create openchat -f Modelfile
 ```
 
 When you set `LOCAL_MODEL_FILE` to the path of your local model, the start
@@ -268,7 +248,7 @@ You can check multiple models at once by listing them as arguments or
 via the `MODEL_NAMES` environment variable:
 
 ```bash
-MODEL_NAMES="mistral jarvik-q4" bash status.sh
+MODEL_NAMES="openchat llama3:8b" bash status.sh
 ```
 
 ## Stopping Jarvik and Uninstall
@@ -426,6 +406,48 @@ ruff check .
 ```
 
 Run `ruff --fix` to automatically resolve simple issues.
+
+## Remote testing
+
+Use `tools/test_endpoint.py` to verify that a Jarvik server is reachable. The
+helper reads the target URL from the `JARVIK_URL` environment variable or from a
+`devlab_config.json` file containing a `url` field.
+
+```bash
+JARVIK_URL=http://example.com:8010 python -m tools.test_endpoint -m "ping"
+```
+
+Example `devlab_config.json`:
+
+```json
+{ "url": "http://example.com:8010" }
+```
+
+With this file present you can simply run:
+
+```bash
+python -m tools.test_endpoint --log flask.log
+```
+
+The script prints the HTTP response and, when `--log` is given, shows the last
+lines of the specified log file.
+
+## GitHub Connector
+
+The helper module `tools/github_connector.py` provides basic GitHub
+automation. Configure the repository URL and authentication token to
+clone or update a repository, inspect diffs or commit history, and push
+changes. Pull requests can be opened either via the `GitPython` library
+or the optional `gh` CLI.
+
+Set the following environment variables or pass them directly to the
+functions:
+
+- `GITHUB_REPO_URL` – HTTPS address of the repository.
+- `GITHUB_TOKEN` – personal access token with repo permissions.
+
+Install the extra dependency `GitPython` and optionally the `gh` CLI if
+you prefer using it for authentication and PR creation.
 
 ## License
 

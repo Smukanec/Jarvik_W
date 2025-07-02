@@ -118,3 +118,22 @@ def test_knowledge_base_dj_smuk_search(tmp_path):
     kb = KnowledgeBase(str(folder))
 
     assert kb.search("DJ \u0160muk") == [text]
+
+
+def test_knowledge_base_topics(tmp_path):
+    folder = tmp_path / "kb"
+    folder.mkdir()
+    (folder / "root.txt").write_text("root", encoding="utf-8")
+    sub1 = folder / "t1"
+    sub1.mkdir()
+    (sub1 / "a.txt").write_text("alpha", encoding="utf-8")
+    sub2 = folder / "t2"
+    sub2.mkdir()
+    (sub2 / "b.txt").write_text("beta", encoding="utf-8")
+
+    kb = KnowledgeBase(str(folder), topics=["t1"])
+    assert kb.search("alpha") == ["alpha"]
+    assert kb.search("beta") == []
+
+    kb.reload(["t2"])
+    assert kb.search("beta") == ["beta"]

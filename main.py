@@ -38,28 +38,11 @@ OPENAI_MODEL = API_MODEL  # backward compatibility
 # Extended information about supported models. Each entry contains a label shown
 # in the UI, whether web search should be enabled and a short description.
 MODEL_INFO: dict[str, dict] = {
-    "zephyr": {
-        "label": "Zephyr – konverzační model",
+    "openchat": {
+        "label": "OpenChat – chytrý AI asistent",
         "web_search": True,
         "description": (
-            "Vhodný pro obecné dotazy, plynulý dialog, podporuje vyhledávání "
-            "informací z webu."
-        ),
-    },
-    "phi3:mini": {
-        "label": "Phi-3 Mini – extrémně rychlý, malý",
-        "web_search": False,
-        "description": (
-            "Vhodný jen pro krátké odpovědi, omezený kontext, nepracuje s "
-            "webem."
-        ),
-    },
-    "mistral": {
-        "label": "Mistral – výchozí model",
-        "web_search": True,
-        "description": (
-            "Univerzální, stabilní, vhodný pro většinu úloh, rozumí textu i "
-            "strukturovanému kontextu z webu."
+            "Vhodný pro běžné otázky, dialog a porozumění pokynům."
         ),
     },
     "nous-hermes2": {
@@ -84,38 +67,6 @@ MODEL_INFO: dict[str, dict] = {
         "description": (
             "Optimalizovaný pro spojení s pamětí a znalostmi, ideální pro "
             "dotazy nad databázemi a webovým kontextem."
-        ),
-    },
-    "deepseek-coder": {
-        "label": "Deepseek Coder – pro programátory",
-        "web_search": False,
-        "description": (
-            "Vhodný na generování kódu, nevhodný pro obecné dotazy nebo "
-            "vyhledávání na webu."
-        ),
-    },
-    "gemma:2b": {
-        "label": "Gemma 2B – velmi malý model",
-        "web_search": False,
-        "description": (
-            "Rychlý, ale s omezenou kapacitou a spolehlivostí, nevhodný pro "
-            "komplexní úkoly."
-        ),
-    },
-    "mistral:7b-Q4_K_M": {
-        "label": "Mistral 7B – klasická verze",
-        "web_search": True,
-        "description": (
-            "Stejné chování jako základní Mistral, vhodné i pro doplnění z "
-            "internetu."
-        ),
-    },
-    "jarvik-q4": {
-        "label": "Jarvik Q4 – laděný Mistral",
-        "web_search": True,
-        "description": (
-            "Upravený model na míru, dobře rozumí historii a kontextu, umí "
-            "doplňovat informace z webu."
         ),
     },
 }
@@ -268,7 +219,7 @@ def require_auth(f):
     return wrapper
 
 # --- Memory handling ------------------------------------------------------
-MEMORY_DIR = os.path.join(BASE_DIR, "memory")
+MEMORY_DIR = os.getenv("MEMORY_DIR", os.path.join(BASE_DIR, "memory"))
 DEFAULT_MEMORY_FOLDER = "public"
 memory_caches: dict[str, list[dict]] = {}
 memory_locks: dict[str, FileLock] = {}
@@ -278,7 +229,8 @@ memory_locks: dict[str, FileLock] = {}
 app = Flask(__name__)
 
 # Načti znalosti při startu
-PUBLIC_KNOWLEDGE_FOLDER = os.path.join(BASE_DIR, "knowledge")
+KNOWLEDGE_DIR = os.getenv("KNOWLEDGE_DIR", os.path.join(BASE_DIR, "knowledge"))
+PUBLIC_KNOWLEDGE_FOLDER = KNOWLEDGE_DIR
 knowledge = KnowledgeBase(PUBLIC_KNOWLEDGE_FOLDER)
 user_knowledge: dict[str, KnowledgeBase] = {}
 print("✅ Znalosti načteny.")
@@ -292,6 +244,7 @@ def get_knowledge_base(user: User | None) -> KnowledgeBase:
         folders = [PUBLIC_KNOWLEDGE_FOLDER]
         for sub in user.knowledge_folders:
             folders.append(os.path.join(PUBLIC_KNOWLEDGE_FOLDER, sub))
+        folders.append(os.path.join(MEMORY_DIR, user.nick, "private_knowledge"))
         kb = KnowledgeBase(folders)
         user_knowledge[user.nick] = kb
     return kb
@@ -754,6 +707,8 @@ def delete_memory_entries():
 @require_auth
 def knowledge_search():
     query = request.args.get("q", "")
+    topics_param = request.args.get("topics")
+    topics = [t.strip() for t in topics_param.split(",") if t.strip()] if topics_param else None
     thresh_param = request.args.get("threshold") or request.args.get("t")
     try:
         thresh = float(thresh_param) if thresh_param is not None else RAG_THRESHOLD
@@ -763,6 +718,8 @@ def knowledge_search():
         return jsonify([])
     user: User | None = getattr(g, "current_user", None)
     kb = get_knowledge_base(user)
+    if topics:
+        kb = KnowledgeBase(kb.folders, model_name=kb.model_name, topics=topics)
     return jsonify(kb.search(query, threshold=thresh))
 
 
@@ -779,6 +736,18 @@ def knowledge_reload():
     return jsonify({"status": "reloaded", "chunks": len(kb.chunks)})
 
 
+@app.route("/knowledge/topics")
+@require_auth
+def knowledge_topics():
+    """Return the topic index from the knowledge folder."""
+    index_path = os.path.join(PUBLIC_KNOWLEDGE_FOLDER, "_index.json")
+    if not os.path.exists(index_path):
+        return jsonify({})
+    with open(index_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return jsonify(data)
+
+
 @app.route("/knowledge/upload", methods=["POST"])
 @require_auth
 def knowledge_upload():
@@ -791,6 +760,7 @@ def knowledge_upload():
         return jsonify({"error": "invalid filename"}), 400
     private = request.form.get("private") in {"1", "true", "yes"}
     description = request.form.get("description", "")
+    topic = request.form.get("topic", "")
     ext = os.path.splitext(filename)[1].lower()
     with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
         uploaded.save(tmp.name)
@@ -805,7 +775,7 @@ def knowledge_upload():
 
     target = PUBLIC_KNOWLEDGE_FOLDER
     if private and user:
-        target = os.path.join(target, user.nick)
+        target = os.path.join(MEMORY_DIR, user.nick, "private_knowledge")
     os.makedirs(target, exist_ok=True)
     base = os.path.splitext(filename)[0]
     name = f"{base}.txt"
@@ -817,6 +787,17 @@ def knowledge_upload():
         counter += 1
     with open(path, "w", encoding="utf-8") as f:
         f.write(text)
+
+    meta = {
+        "uploader": user.nick if user else "anonymous",
+        "proposed_topic": topic,
+        "topic": topic,
+        "status": "pending_approval" if not private else "private",
+        "public": not private,
+    }
+    meta_path = os.path.join(target, f"{os.path.splitext(name)[0]}.meta.json")
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f)
 
     kb = get_knowledge_base(user)
     kb.reload()
@@ -832,6 +813,98 @@ def knowledge_upload():
     append_to_memory("", msg, folder=folder)
 
     return jsonify({"status": "saved", "file": name})
+
+
+@app.route("/knowledge/pending")
+@require_auth
+def knowledge_pending():
+    """Return metadata for knowledge files awaiting approval."""
+    pending: list[dict] = []
+    base = os.path.abspath(PUBLIC_KNOWLEDGE_FOLDER)
+    for root, _dirs, files in os.walk(base):
+        for fname in files:
+            if not fname.endswith(".meta.json"):
+                continue
+            path = os.path.join(root, fname)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    meta = json.load(f)
+            except Exception:
+                continue
+            if meta.get("status") == "pending_approval":
+                rel = os.path.relpath(os.path.splitext(path)[0] + ".txt", base)
+                meta = dict(meta)
+                meta["file"] = rel
+                pending.append(meta)
+    return jsonify(pending)
+
+
+def _resolve_public_path(rel: str) -> str:
+    rel = rel.lstrip("/\\")
+    full = os.path.abspath(os.path.join(PUBLIC_KNOWLEDGE_FOLDER, rel))
+    base = os.path.abspath(PUBLIC_KNOWLEDGE_FOLDER)
+    if not full.startswith(base):
+        raise ValueError("invalid path")
+    return full
+
+
+@app.route("/knowledge/approve", methods=["POST"])
+@require_auth
+def knowledge_approve():
+    data = request.get_json(silent=True) or {}
+    rel = data.get("file")
+    if not rel:
+        return jsonify({"error": "file required"}), 400
+    try:
+        file_path = _resolve_public_path(rel)
+    except ValueError:
+        return jsonify({"error": "invalid file"}), 400
+    meta_path = os.path.splitext(file_path)[0] + ".meta.json"
+    if not os.path.exists(meta_path):
+        return jsonify({"error": "not found"}), 404
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+    except Exception:
+        meta = {}
+    meta["status"] = "approved"
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f)
+    knowledge.reload()
+    return jsonify({"status": "approved"})
+
+
+@app.route("/knowledge/reject", methods=["POST"])
+@require_auth
+def knowledge_reject():
+    data = request.get_json(silent=True) or {}
+    rel = data.get("file")
+    if not rel:
+        return jsonify({"error": "file required"}), 400
+    try:
+        file_path = _resolve_public_path(rel)
+    except ValueError:
+        return jsonify({"error": "invalid file"}), 400
+    meta_path = os.path.splitext(file_path)[0] + ".meta.json"
+    if not os.path.exists(meta_path):
+        return jsonify({"error": "not found"}), 404
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+    except Exception:
+        meta = {}
+    uploader = meta.get("uploader", "unknown")
+    meta["status"] = "rejected"
+    target = os.path.join(MEMORY_DIR, uploader, "private_knowledge")
+    os.makedirs(target, exist_ok=True)
+    dest_file = os.path.join(target, os.path.basename(file_path))
+    dest_meta = os.path.join(target, os.path.basename(meta_path))
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f)
+    os.replace(file_path, dest_file)
+    os.replace(meta_path, dest_meta)
+    knowledge.reload()
+    return jsonify({"status": "rejected"})
 
 
 @app.route("/model", methods=["GET", "POST"])

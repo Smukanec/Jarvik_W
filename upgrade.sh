@@ -71,6 +71,6 @@ fi
 bash load.sh
 
 # Start automatically
-bash start_gemma_2b.sh
+bash start_openchat.sh
 
 echo -e "${GREEN}✅ Upgrade dokončen.${NC}"

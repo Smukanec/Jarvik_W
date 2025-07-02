@@ -13,12 +13,20 @@ import rag_engine
 
 
 class DummyKB:
-    def __init__(self, folder=None):
-        self.folder = folder
-        self.chunks = ["dummy"]
+    last_topics = None
 
-    def reload(self):
-        pass
+    def __init__(self, folder=None, model_name=None, topics=None):
+        self.folder = folder
+        self.model_name = model_name
+        self.folders = [folder] if folder and not isinstance(folder, list) else folder
+        self.chunks = ["dummy"]
+        self.topics = topics
+        DummyKB.last_topics = topics
+
+    def reload(self, topics=None):
+        DummyKB.last_topics = topics
+        if topics is not None:
+            self.topics = topics
 
     def search(self, query, threshold=None):
         return [f"kb:{query}"]
@@ -166,6 +174,17 @@ def test_knowledge_search(client):
     assert res.get_json() == []
 
 
+def test_knowledge_search_topics(client):
+    DummyKB.last_topics = None
+    res = client.get(
+        "/knowledge/search",
+        query_string={"q": "x", "topics": "t1,t2"},
+        headers=_auth(),
+    )
+    assert res.status_code == 200
+    assert DummyKB.last_topics == ["t1", "t2"]
+
+
 def test_login_and_token(client):
     import main
     res = client.post("/login", json={"nick": "bob", "password": "pw"})
@@ -215,6 +234,7 @@ def test_per_user_knowledge_folders(client):
     kb = main.user_knowledge["bob"]
     assert main.PUBLIC_KNOWLEDGE_FOLDER in kb.folder[0]
     assert os.path.join(main.PUBLIC_KNOWLEDGE_FOLDER, "private") in kb.folder[1]
+    assert os.path.join(main.MEMORY_DIR, "bob", "private_knowledge") in kb.folder[2]
 
 
 def test_ask_web_endpoint(client, monkeypatch):
@@ -498,6 +518,93 @@ def test_knowledge_upload_records_description(client, monkeypatch, tmp_path):
     assert "some info" in entry["jarvik"]
 
 
+def test_knowledge_upload_creates_meta(client, monkeypatch, tmp_path):
+    import main
+    import os
+    import json
+
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+    called = []
+    main.knowledge.folder = str(tmp_path)
+
+    def fake_reload():
+        called.append(True)
+
+    main.knowledge.reload = fake_reload
+    data = {
+        "file": (io.BytesIO(b"hello"), "meta.txt"),
+        "private": "0",
+        "topic": "technologie",
+    }
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    assert called
+    fname = res.get_json()["file"]
+    meta_path = os.path.join(
+        tmp_path, os.path.splitext(fname)[0] + ".meta.json"
+    )
+    with open(meta_path, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+    assert meta["uploader"] == "bob"
+    assert meta["proposed_topic"] == "technologie"
+    assert meta["topic"] == "technologie"
+    assert meta["status"] == "pending_approval"
+    assert meta["public"] is True
+
+
+def test_private_knowledge_upload_saves_to_memory(client, monkeypatch, tmp_path):
+    import main
+    import json
+
+    pub = tmp_path / "pub"
+    pub.mkdir()
+    mem = tmp_path / "mem"
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(pub))
+    monkeypatch.setattr(main, "MEMORY_DIR", str(mem))
+    main.knowledge.folder = str(pub)
+    main.knowledge.reload = lambda: None
+
+    data = {"file": (io.BytesIO(b"hello"), "priv.txt"), "private": "1"}
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    fname = res.get_json()["file"]
+
+    dest_file = mem / "bob" / "private_knowledge" / fname
+    dest_meta = dest_file.with_suffix(".meta.json")
+    assert dest_file.exists()
+    assert dest_meta.exists()
+    with open(dest_meta, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+    assert meta["status"] == "private"
+
+
+def test_knowledge_topics(client, monkeypatch, tmp_path):
+    import main
+    import os
+    import json
+
+    data = {"a": "b"}
+    os.makedirs(tmp_path, exist_ok=True)
+    with open(os.path.join(tmp_path, "_index.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f)
+
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+
+    res = client.get("/knowledge/topics", headers=_auth())
+    assert res.status_code == 200
+    assert res.get_json() == data
+
+
 def test_memory_delete_by_keyword(client, tmp_path):
     import main
     import json
@@ -534,4 +641,75 @@ def test_read_memory_file_new_format(monkeypatch, tmp_path):
 
     entries = main._read_memory_file(main.DEFAULT_MEMORY_FOLDER)
     assert entries == [{"user": "q", "jarvik": "a"}]
+
+
+def test_knowledge_pending_and_approve(client, monkeypatch, tmp_path):
+    import main
+    import os
+    import json
+
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+    main.knowledge.folder = str(tmp_path)
+    main.knowledge.reload = lambda: None
+
+    data = {"file": (io.BytesIO(b"x"), "pend.txt"), "private": "0"}
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    fname = res.get_json()["file"]
+
+    res = client.get("/knowledge/pending", headers=_auth())
+    assert res.status_code == 200
+    pending = res.get_json()
+    assert len(pending) == 1
+    assert pending[0]["file"] == fname
+
+    res = client.post("/knowledge/approve", json={"file": fname}, headers=_auth())
+    assert res.status_code == 200
+
+    meta_path = os.path.join(tmp_path, os.path.splitext(fname)[0] + ".meta.json")
+    with open(meta_path, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+    assert meta["status"] == "approved"
+
+    res = client.get("/knowledge/pending", headers=_auth())
+    assert res.status_code == 200
+    assert res.get_json() == []
+
+
+def test_knowledge_reject_moves_file(client, monkeypatch, tmp_path):
+    import main
+    import json
+
+    pub = tmp_path / "pub"
+    pub.mkdir()
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(pub))
+    monkeypatch.setattr(main, "MEMORY_DIR", str(tmp_path / "mem"))
+    main.knowledge.folder = str(pub)
+    main.knowledge.reload = lambda: None
+
+    data = {"file": (io.BytesIO(b"x"), "rej.txt"), "private": "0"}
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    fname = res.get_json()["file"]
+
+    res = client.post("/knowledge/reject", json={"file": fname}, headers=_auth())
+    assert res.status_code == 200
+
+    dest_file = tmp_path / "mem" / "bob" / "private_knowledge" / fname
+    dest_meta = dest_file.with_suffix(".meta.json")
+    assert dest_file.exists()
+    assert dest_meta.exists()
+    with open(dest_meta, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+    assert meta["status"] == "rejected"
 

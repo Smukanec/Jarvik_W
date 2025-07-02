@@ -2,13 +2,14 @@
 
 Tento krátký manuál popisuje základní kroky pro instalaci a spuštění Jarvika na lokálním stroji.
 
-Ve výchozím nastavení je použit model `gemma:2b` z Ollamy. Model lze kdykoli změnit ve webovém rozhraní nebo voláním endpointu `/model`. V příkladech je předpokládána Gemma 2B, jiný model zvolíte nastavením proměnné `MODEL_NAME` při spouštění skriptů.
+Ve výchozím nastavení je použit model `openchat`. Model lze kdykoli změnit ve webovém rozhraní nebo voláním endpointu `/model`. V příkladech je předpokládán OpenChat, jiný model zvolíte nastavením proměnné `MODEL_NAME` při spouštění skriptů.
 Flask API naslouchá na portu `8010`, který lze změnit proměnnou `FLASK_PORT`.
 Pro vzdálenou Ollamu nastavte proměnnou `OLLAMA_URL` (výchozí
 `http://localhost:11434`).
 Citlivost vyhledávání ve znalostech můžete upravit proměnnou `RAG_THRESHOLD`
 (výchozí hodnota je `0.7`).
 Znalostní soubory lze nahrávat v rozhraní pomocí tlačítka "Nahrát". Ke každému souboru můžete uvést popis, který se uloží do paměti.
+Výchozí umístění adresářů `memory/` a `knowledge/` lze změnit pomocí proměnných `MEMORY_DIR` a `KNOWLEDGE_DIR`.
 
 ## Instalace
 
@@ -32,45 +33,39 @@ Znalostní soubory lze nahrávat v rozhraní pomocí tlačítka "Nahrát". Ke ka
    ```bash
    bash load.sh
    ```
-    Do souboru `~/.bashrc` se přidají příkazy jako `jarvik-start`, `jarvik-status`,
-    `jarvik-model`, `jarvik-flask`, `jarvik-ollama` a `jarvik-start-7b`.
+   Do souboru `~/.bashrc` se přidají příkazy jako `jarvik-start`, `jarvik-status`,
+   `jarvik-model`, `jarvik-flask`, `jarvik-ollama` a `jarvik-start-llama3`.
 
 ## Spuštění
 
 Jarvika spustíte buď přímo pomocí skriptu `start_jarvik.sh`, nebo přes alias `jarvik-start` (pokud jste provedli krok s načtením aliasů):
 ```bash
-bash start_gemma_2b.sh
+bash start_openchat.sh
 # nebo
 jarvik-start
 ```
 Skript aktivuje virtuální prostředí, spustí Ollamu, zvolený model (výchozí
-Gemma 2B) a nakonec Flask server na portu 8010 (lze změnit proměnnou
+OpenChat) a nakonec Flask server na portu 8010 (lze změnit proměnnou
 `FLASK_PORT`). Pokud model chybí, stáhne se automaticky. Pro jiný model
 nastavte proměnnou `MODEL_NAME` při spuštění – všechny dodané skripty ji nyní
 plně respektují. Například:
 
 ```bash
-MODEL_NAME="mistral:7b-Q4_K_M" bash start_jarvik.sh
+MODEL_NAME="llama3:8b" bash start_jarvik.sh
 ```
 nebo použijte připravený skript pro Mistral 7B:
 
 ```bash
-bash start_mistral_7b.sh
-# nebo
-jarvik-start-7b
-# (k dispozici po spuštění `bash load.sh`)
+bash start_llama3_8b.sh
 ```
 
 Podobné skripty jsou připraveny i pro další modely:
 
 ```bash
-bash start_jarvik_q4.sh      # jarvik-q4
 bash start_llama3_8b.sh      # llama3:8b
 bash start_command_r.sh      # command-r
-bash start_deepseek_coder.sh # deepseek-coder
 bash start_nous_hermes2.sh   # nous-hermes2
-bash start_phi3_mini.sh      # phi3:mini
-bash start_zephyr.sh         # zephyr
+MODEL_NAME=api bash start_jarvik.sh # externí API
 ```
 Každý z těchto skriptů volá `switch_model.sh`,
 který nejprve zastaví běžící model i Flask a poté
@@ -83,15 +78,10 @@ Stejnou hodnotu používá i samotná Flask aplikace.
 Modely lze stáhnout předem příkazem `ollama pull`:
 
 ```bash
-ollama pull gemma:2b
-ollama pull mistral:7b-Q4_K_M
-ollama pull jarvik-q4
+ollama pull openchat
 ollama pull llama3:8b
 ollama pull command-r
-ollama pull deepseek-coder
 ollama pull nous-hermes2
-ollama pull phi3:mini
-ollama pull zephyr
 ```
 
 ### Přepnutí modelu za běhu
@@ -101,7 +91,7 @@ Stačí spustit skript `switch_model.sh` s názvem požadovaného modelu nebo
 vybrat nový model v rozhraní aplikace. Interně se volá endpoint `/model`.
 
 ```bash
-bash switch_model.sh mistral:7b-Q4_K_M
+bash switch_model.sh openchat
 ```
 
 Případně je možné odeslat HTTP POST požadavek na `/model` s JSON
@@ -111,11 +101,11 @@ na stejnou adresu zjistíte aktuálně spuštěný model.
 ### Offline použití
 
 Pokud nemáte k dispozici internetové připojení, stáhněte si nejprve soubor s
-modelem, například skriptem `stahni-mistral-q4.sh`. Vytvořte `Modelfile` s řádkem
-`FROM /cesta/k/mistral.q4_K_M.gguf` a zaregistrujte model příkazem:
+modelem a vytvořte `Modelfile` s řádkem
+`FROM /cesta/k/model.gguf` a zaregistrujte model příkazem:
 
 ```bash
-ollama create mistral:7b-Q4_K_M -f Modelfile
+ollama create openchat -f Modelfile
 ```
 
 Nastavíte-li proměnnou `LOCAL_MODEL_FILE` na cestu k tomuto souboru, startovací
@@ -181,7 +171,7 @@ Pro kontrolu více modelů najednou je lze uvést jako argumenty nebo nastavit
 proměnnou `MODEL_NAMES`:
 
 ```bash
-MODEL_NAMES="mistral jarvik-q4" bash status.sh
+MODEL_NAMES="openchat llama3:8b" bash status.sh
 ```
 
 ## Ukončení a odinstalování
@@ -195,7 +185,7 @@ Skript ukončí Ollamu, spuštěný model i Flask, smaže adresáře `venv/` a `
 Pokud potřebujete Jarvika jen restartovat s jiným modelem, použijte
 
 ```bash
-bash switch_model.sh mistral:7b-Q4_K_M
+bash switch_model.sh openchat
 ```
 
 ## Rychlý start
