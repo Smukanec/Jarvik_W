@@ -3,7 +3,7 @@ import json
 import argparse
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MEMORY_DIR = os.path.join(BASE_DIR, "memory")
+MEMORY_DIR = os.getenv("MEMORY_DIR", os.path.join(BASE_DIR, "memory"))
 DEFAULT_FILE = os.path.join(MEMORY_DIR, "public.jsonl")
 
 

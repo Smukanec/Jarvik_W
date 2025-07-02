@@ -1,5 +1,6 @@
 import os
 import glob
+import os
 import re
 import unicodedata
 import difflib
@@ -192,7 +193,10 @@ class KnowledgeBase:
 # Convenience API
 # ---------------------------------------------------------------------------
 
-_DEFAULT_FOLDER = os.path.join(os.path.dirname(__file__), "knowledge")
+_DEFAULT_FOLDER = os.getenv(
+    "KNOWLEDGE_DIR",
+    os.path.join(os.path.dirname(__file__), "knowledge"),
+)
 _default_kb: KnowledgeBase | None = None
 
 

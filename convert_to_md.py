@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 try:
     import pdfplumber
@@ -10,7 +11,7 @@ try:
 except ImportError:  # pragma: no cover - simple import guard
     Document = None
 
-INPUT_DIR = Path("knowledge")
+INPUT_DIR = Path(os.getenv("KNOWLEDGE_DIR", "knowledge"))
 OUTPUT_DIR = Path("knowledge_md")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
