@@ -165,6 +165,7 @@
   <h3>➕ Přidat znalost</h3>
   <input type="file" id="knowledge-file"><br>
   <label><input type="checkbox" id="knowledge-private"> Soukromá</label><br>
+  <select id="knowledge-topic"></select><br>
   <input id="knowledge-desc" placeholder="Popis souboru"><br>
   <button onclick="uploadKnowledge()">Nahrát</button>
   <pre id="knowledge-status"></pre>
@@ -218,6 +219,20 @@
       document.getElementById('model-desc').textContent = MODEL_DESCRIPTIONS[val] || '';
     }
 
+    async function loadTopics() {
+      try {
+        const res = await authFetch('/knowledge/topics');
+        if (!res.ok) return;
+        const data = await res.json();
+        const sel = document.getElementById('knowledge-topic');
+        if (!sel) return;
+        sel.appendChild(new Option('', ''));
+        Object.entries(data).forEach(([k, v]) => {
+          sel.appendChild(new Option(v, k));
+        });
+      } catch (e) {}
+    }
+
     let token = localStorage.getItem('token') || '';
     let apiKey = localStorage.getItem('apiKey') || '';
 
@@ -263,11 +278,12 @@
       updateModelDesc();
     }
 
-   function showInterface() {
-      document.getElementById('login').style.display = 'none';
-      document.getElementById('interface').style.display = 'block';
-      loadModel();
-      document.getElementById('token-display').textContent = token;
+  function showInterface() {
+     document.getElementById('login').style.display = 'none';
+     document.getElementById('interface').style.display = 'block';
+     loadModel();
+     loadTopics();
+     document.getElementById('token-display').textContent = token;
       const select = document.getElementById('model-select');
       if (select) {
         select.addEventListener('change', () => {
@@ -483,6 +499,8 @@
       formData.append('private', document.getElementById('knowledge-private').checked ? '1' : '0');
       const desc = document.getElementById('knowledge-desc').value.trim();
       if (desc) formData.append('description', desc);
+      const topic = document.getElementById('knowledge-topic').value;
+      if (topic) formData.append('topic', topic);
       const res = await authFetch('/knowledge/upload', { method: 'POST', body: formData });
       document.getElementById('knowledge-status').textContent = res.ok ? '✅ Uloženo' : '❌ Chyba';
       if (res.ok) {

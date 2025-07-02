@@ -730,6 +730,18 @@ def knowledge_reload():
     return jsonify({"status": "reloaded", "chunks": len(kb.chunks)})
 
 
+@app.route("/knowledge/topics")
+@require_auth
+def knowledge_topics():
+    """Return the topic index from the knowledge folder."""
+    index_path = os.path.join(PUBLIC_KNOWLEDGE_FOLDER, "_index.json")
+    if not os.path.exists(index_path):
+        return jsonify({})
+    with open(index_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return jsonify(data)
+
+
 @app.route("/knowledge/upload", methods=["POST"])
 @require_auth
 def knowledge_upload():
@@ -742,6 +754,7 @@ def knowledge_upload():
         return jsonify({"error": "invalid filename"}), 400
     private = request.form.get("private") in {"1", "true", "yes"}
     description = request.form.get("description", "")
+    topic = request.form.get("topic", "")
     ext = os.path.splitext(filename)[1].lower()
     with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
         uploaded.save(tmp.name)
@@ -768,6 +781,17 @@ def knowledge_upload():
         counter += 1
     with open(path, "w", encoding="utf-8") as f:
         f.write(text)
+
+    meta = {
+        "uploader": user.nick if user else "anonymous",
+        "proposed_topic": topic,
+        "topic": topic,
+        "status": "pending_approval" if not private else "private",
+        "public": not private,
+    }
+    meta_path = os.path.join(target, f"{os.path.splitext(name)[0]}.meta.json")
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f)
 
     kb = get_knowledge_base(user)
     kb.reload()

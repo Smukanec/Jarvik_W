@@ -498,6 +498,62 @@ def test_knowledge_upload_records_description(client, monkeypatch, tmp_path):
     assert "some info" in entry["jarvik"]
 
 
+def test_knowledge_upload_creates_meta(client, monkeypatch, tmp_path):
+    import main
+    import os
+    import json
+
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+    called = []
+    main.knowledge.folder = str(tmp_path)
+
+    def fake_reload():
+        called.append(True)
+
+    main.knowledge.reload = fake_reload
+    data = {
+        "file": (io.BytesIO(b"hello"), "meta.txt"),
+        "private": "0",
+        "topic": "technologie",
+    }
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    assert called
+    fname = res.get_json()["file"]
+    meta_path = os.path.join(
+        tmp_path, os.path.splitext(fname)[0] + ".meta.json"
+    )
+    with open(meta_path, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+    assert meta["uploader"] == "bob"
+    assert meta["proposed_topic"] == "technologie"
+    assert meta["topic"] == "technologie"
+    assert meta["status"] == "pending_approval"
+    assert meta["public"] is True
+
+
+def test_knowledge_topics(client, monkeypatch, tmp_path):
+    import main
+    import os
+    import json
+
+    data = {"a": "b"}
+    os.makedirs(tmp_path, exist_ok=True)
+    with open(os.path.join(tmp_path, "_index.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f)
+
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+
+    res = client.get("/knowledge/topics", headers=_auth())
+    assert res.status_code == 200
+    assert res.get_json() == data
+
+
 def test_memory_delete_by_keyword(client, tmp_path):
     import main
     import json
