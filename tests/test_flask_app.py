@@ -591,3 +591,75 @@ def test_read_memory_file_new_format(monkeypatch, tmp_path):
     entries = main._read_memory_file(main.DEFAULT_MEMORY_FOLDER)
     assert entries == [{"user": "q", "jarvik": "a"}]
 
+
+def test_knowledge_pending_and_approve(client, monkeypatch, tmp_path):
+    import main
+    import os
+    import json
+
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
+    main.knowledge.folder = str(tmp_path)
+    main.knowledge.reload = lambda: None
+
+    data = {"file": (io.BytesIO(b"x"), "pend.txt"), "private": "0"}
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    fname = res.get_json()["file"]
+
+    res = client.get("/knowledge/pending", headers=_auth())
+    assert res.status_code == 200
+    pending = res.get_json()
+    assert len(pending) == 1
+    assert pending[0]["file"] == fname
+
+    res = client.post("/knowledge/approve", json={"file": fname}, headers=_auth())
+    assert res.status_code == 200
+
+    meta_path = os.path.join(tmp_path, os.path.splitext(fname)[0] + ".meta.json")
+    with open(meta_path, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+    assert meta["status"] == "approved"
+
+    res = client.get("/knowledge/pending", headers=_auth())
+    assert res.status_code == 200
+    assert res.get_json() == []
+
+
+def test_knowledge_reject_moves_file(client, monkeypatch, tmp_path):
+    import main
+    import os
+    import json
+
+    pub = tmp_path / "pub"
+    pub.mkdir()
+    monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(pub))
+    monkeypatch.setattr(main, "MEMORY_DIR", str(tmp_path / "mem"))
+    main.knowledge.folder = str(pub)
+    main.knowledge.reload = lambda: None
+
+    data = {"file": (io.BytesIO(b"x"), "rej.txt"), "private": "0"}
+    res = client.post(
+        "/knowledge/upload",
+        data=data,
+        headers=_auth(),
+        content_type="multipart/form-data",
+    )
+    assert res.status_code == 200
+    fname = res.get_json()["file"]
+
+    res = client.post("/knowledge/reject", json={"file": fname}, headers=_auth())
+    assert res.status_code == 200
+
+    dest_file = tmp_path / "mem" / "bob" / "private_knowledge" / fname
+    dest_meta = dest_file.with_suffix(".meta.json")
+    assert dest_file.exists()
+    assert dest_meta.exists()
+    with open(dest_meta, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+    assert meta["status"] == "rejected"
+

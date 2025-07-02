@@ -809,6 +809,98 @@ def knowledge_upload():
     return jsonify({"status": "saved", "file": name})
 
 
+@app.route("/knowledge/pending")
+@require_auth
+def knowledge_pending():
+    """Return metadata for knowledge files awaiting approval."""
+    pending: list[dict] = []
+    base = os.path.abspath(PUBLIC_KNOWLEDGE_FOLDER)
+    for root, _dirs, files in os.walk(base):
+        for fname in files:
+            if not fname.endswith(".meta.json"):
+                continue
+            path = os.path.join(root, fname)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    meta = json.load(f)
+            except Exception:
+                continue
+            if meta.get("status") == "pending_approval":
+                rel = os.path.relpath(os.path.splitext(path)[0] + ".txt", base)
+                meta = dict(meta)
+                meta["file"] = rel
+                pending.append(meta)
+    return jsonify(pending)
+
+
+def _resolve_public_path(rel: str) -> str:
+    rel = rel.lstrip("/\\")
+    full = os.path.abspath(os.path.join(PUBLIC_KNOWLEDGE_FOLDER, rel))
+    base = os.path.abspath(PUBLIC_KNOWLEDGE_FOLDER)
+    if not full.startswith(base):
+        raise ValueError("invalid path")
+    return full
+
+
+@app.route("/knowledge/approve", methods=["POST"])
+@require_auth
+def knowledge_approve():
+    data = request.get_json(silent=True) or {}
+    rel = data.get("file")
+    if not rel:
+        return jsonify({"error": "file required"}), 400
+    try:
+        file_path = _resolve_public_path(rel)
+    except ValueError:
+        return jsonify({"error": "invalid file"}), 400
+    meta_path = os.path.splitext(file_path)[0] + ".meta.json"
+    if not os.path.exists(meta_path):
+        return jsonify({"error": "not found"}), 404
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+    except Exception:
+        meta = {}
+    meta["status"] = "approved"
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f)
+    knowledge.reload()
+    return jsonify({"status": "approved"})
+
+
+@app.route("/knowledge/reject", methods=["POST"])
+@require_auth
+def knowledge_reject():
+    data = request.get_json(silent=True) or {}
+    rel = data.get("file")
+    if not rel:
+        return jsonify({"error": "file required"}), 400
+    try:
+        file_path = _resolve_public_path(rel)
+    except ValueError:
+        return jsonify({"error": "invalid file"}), 400
+    meta_path = os.path.splitext(file_path)[0] + ".meta.json"
+    if not os.path.exists(meta_path):
+        return jsonify({"error": "not found"}), 404
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+    except Exception:
+        meta = {}
+    uploader = meta.get("uploader", "unknown")
+    meta["status"] = "rejected"
+    target = os.path.join(MEMORY_DIR, uploader, "private_knowledge")
+    os.makedirs(target, exist_ok=True)
+    dest_file = os.path.join(target, os.path.basename(file_path))
+    dest_meta = os.path.join(target, os.path.basename(meta_path))
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f)
+    os.replace(file_path, dest_file)
+    os.replace(meta_path, dest_meta)
+    knowledge.reload()
+    return jsonify({"status": "rejected"})
+
+
 @app.route("/model", methods=["GET", "POST"])
 @require_auth
 def model_route():

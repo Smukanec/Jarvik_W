@@ -170,6 +170,10 @@
   <button onclick="uploadKnowledge()">Nahrát</button>
   <pre id="knowledge-status"></pre>
 
+  <h3>📥 Ke schválení</h3>
+  <ul id="pending-list"></ul>
+  <button onclick="loadPending()">Obnovit</button>
+
   <h3>🧹 Smazat paměť</h3>
   <label>Od: <input type="datetime-local" id="delete-from"></label><br>
   <label>Do: <input type="datetime-local" id="delete-to"></label><br>
@@ -283,6 +287,7 @@
      document.getElementById('interface').style.display = 'block';
      loadModel();
      loadTopics();
+     loadPending();
      document.getElementById('token-display').textContent = token;
       const select = document.getElementById('model-select');
       if (select) {
@@ -534,6 +539,45 @@
       });
       const data = await res.json();
       document.getElementById('delete-status').textContent = res.ok ? data.message : '❌ Chyba';
+    }
+
+    async function loadPending() {
+      const res = await authFetch('/knowledge/pending');
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = document.getElementById('pending-list');
+      list.textContent = '';
+      data.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item.file + ' ';
+        const ok = document.createElement('button');
+        ok.textContent = '✅';
+        ok.onclick = () => approveFile(item.file);
+        const no = document.createElement('button');
+        no.textContent = '❌';
+        no.onclick = () => rejectFile(item.file);
+        li.appendChild(ok);
+        li.appendChild(no);
+        list.appendChild(li);
+      });
+    }
+
+    async function approveFile(file) {
+      await authFetch('/knowledge/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file })
+      });
+      loadPending();
+    }
+
+    async function rejectFile(file) {
+      await authFetch('/knowledge/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file })
+      });
+      loadPending();
     }
 
     document.getElementById("message").addEventListener("keydown", function (e) {
