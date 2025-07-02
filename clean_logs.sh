@@ -1,11 +1,14 @@
 #!/bin/bash
 echo "🧹 Odstraňuji logy z verzování..."
 
-git rm --cached flask.log 2>/dev/null
-git rm --cached ollama.log 2>/dev/null
-git rm --cached "gemma2b.log" 2>/dev/null
+log_files=$(git ls-files '*.log')
+if [ -n "$log_files" ]; then
+  echo "$log_files" | xargs git rm --cached >/dev/null 2>&1
+fi
 
-echo "*.log" >> .gitignore
+if [ ! -f .gitignore ] || ! grep -qxF "*.log" .gitignore; then
+  echo "*.log" >> .gitignore
+fi
 
 git add .gitignore
 git commit -m "Auto: odstranění logů a aktualizace .gitignore"
