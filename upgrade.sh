@@ -46,6 +46,7 @@ if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/n
     echo -e "${GREEN}🔄 Stahuji nejnovější verzi...${NC}"
     BEFORE_HASH="$(sha256sum "$0" | awk '{print $1}')"
     if git pull; then
+      git submodule update --init --recursive
       AFTER_HASH="$(sha256sum "$0" | awk '{print $1}')"
       if [ "$BEFORE_HASH" != "$AFTER_HASH" ]; then
         echo -e "${GREEN}🔁 Skript byl aktualizován, znovu jej spouštím...${NC}"
@@ -57,6 +58,7 @@ if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/n
   else
     echo -e "${GREEN}⚠️  Git remote není nastaven, stahování vynecháno.${NC}"
   fi
+  git submodule update --init --recursive
 else
   echo -e "${GREEN}⚠️  Adresář není git repozitář, stahování vynecháno.${NC}"
 fi

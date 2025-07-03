@@ -2,7 +2,7 @@
 
 echo "🔍 Kontrola systému JARVIK..."
 
-MODEL_NAME=${MODEL_NAME:-"gemma:2b"}
+MODEL_NAME=${MODEL_NAME:-"openchat"}
 FLASK_PORT=${FLASK_PORT:-8010}
 
 is_windows() {
