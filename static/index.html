@@ -14,141 +14,60 @@
       max-height: 100px;
       margin-bottom: 1em;
     }
-    textarea, input, select {
+    textarea {
       width: 100%;
-      padding: 0.6em;
-      font-size: 1em;
-      border-radius: 6px;
-      border: 1px solid #00ff00;
-      background-color: #1e1e1e;
-      color: #c8f6c8;
-      margin-top: 0.4em;
-    }
-    button {
-      background-color: #00aa00;
-      color: white;
-      border: none;
-      padding: 0.8em 1.5em;
-      font-size: 1em;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 0.5em;
-    }
-    button:hover {
-      background-color: #007700;
-    }
-    pre {
-      background-color: #1e1e1e;
-      border: 1px solid #2e7d32;
       padding: 1em;
+      font-size: 1em;
+      border: 2px solid #00ff00;
       border-radius: 8px;
-      margin-top: 1em;
+      background-color: #1e1e1e;
       color: #c8f6c8;
-      white-space: pre-wrap;
-      word-break: break-word;
-      text-align: left;
     }
+    /* …další CSS… */
   </style>
 </head>
 <body>
-  <h1>Jarvik</h1>
+  <img src="/static/alternativ.png" alt="Jarvik logo">
 
-  <h2>🧠 Dotaz</h2>
-  <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea>
-  <br>
-  <button onclick="ask()">Odeslat</button>
+  <div id="login" style="display:none">
+    <input id="nick" placeholder="nick"><br>
+    <input id="password" type="password" placeholder="password"><br>
+    <input id="apikey" placeholder="API key (optional)"><br>
+    <button onclick="doLogin()">Login</button>
+    <pre id="login-status"></pre>
+  </div>
 
-  <pre id="response"></pre>
+  <div id="interface" style="display:none">
+    <h2 id="current-model-display">Running model: <span id="current-model">?</span></h2>
+    <select id="model-select">
+      <option value="openchat" title="Chytrý AI asistent. Vhodný pro běžné otázky, dialog a porozumění pokynům.">OpenChat – chytrý AI asistent 🌐</option>
+      <option value="llama3:8b" title="Vysoká přesnost, vhodný pro složitější dotazy, rozumí webovému obsahu i dokumentům.">LLaMA 3 8B – velký jazykový model 🌐</option>
+      <option value="nous-hermes2" title="Dobře zvládá otázky, formální texty i instrukce, vhodný i pro složitější dotazy s doplněním z internetu.">Nous Hermes 2 – jemně doladěný Mistral 🌐</option>
+      <option value="command-r" title="Optimalizovaný pro programování, Python, shell, kódové úkoly.">Command R – model pro RAG 🌐</option>
+      <option value="api" title="Externí API – dotazy jsou posílány do API.">Externí API</option>
+    </select>
+    <button onclick="switchModel()">Switch model</button>
+    <p id="model-desc"></p>
+    <pre id="model-status"></pre>
 
-  <h2>📥 Přidat znalost</h2>
-  <input type="file" id="knowledge-file"><br>
-  <label><input type="checkbox" id="knowledge-private"> Soukromá</label><br>
-  <input id="knowledge-desc" placeholder="Popis souboru"><br>
-  <select id="knowledge-topic">
-    <option value="">(Automaticky)</option>
-  </select><br>
-  <button onclick="uploadKnowledge()">Nahrát</button>
-  <pre id="knowledge-status"></pre>
+    <div id="env-switch">
+      Environment: <span id="env-info">local</span>
+      <button id="env-toggle" onclick="toggleEnv()" style="display:none">Use DevLab</button>
+    </div>
 
-  <script>
-    async function ask() {
-      const msg = document.getElementById("message").value;
-      const token = localStorage.getItem("token") || "";
-      const res = await fetch("/ask", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + token
-        },
-        body: JSON.stringify({ message: msg })
-      });
-      const data = await res.json();
-      document.getElementById("response").textContent = data.response || JSON.stringify(data);
-    }
+    <pre id="token-display"></pre>
+    <button onclick="copyToken()">Copy token</button>
 
-    async function uploadKnowledge() {
-      const fileInput = document.getElementById("knowledge-file");
-      const file = fileInput.files[0];
-      if (!file) {
-        document.getElementById("knowledge-status").textContent = "❌ Vyber soubor.";
-        return;
-      }
+    <p id="intro">Napiš dotaz nebo přilož soubor a klikni na <strong>Odeslat</strong>.</p>
 
-      const isPrivate = document.getElementById("knowledge-private").checked;
-      const description = document.getElementById("knowledge-desc").value;
-      const topicSelect = document.getElementById("knowledge-topic");
-      const topic = topicSelect.value || "";
-
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("private", isPrivate ? "true" : "false");
-      formData.append("description", description);
-      formData.append("topic", topic);
-
-      try {
-        const token = localStorage.getItem("token") || "";
-        const res = await fetch("/knowledge/upload", {
-          method: "POST",
-          headers: {
-            "Authorization": "Bearer " + token
-          },
-          body: formData
-        });
-
-        const data = await res.json();
-        if (data.status === "saved") {
-          document.getElementById("knowledge-status").textContent = `✅ Soubor uložen jako: ${data.file}`;
-        } else {
-          document.getElementById("knowledge-status").textContent = "❌ Chyba: " + JSON.stringify(data);
-        }
-      } catch (err) {
-        document.getElementById("knowledge-status").textContent = "❌ Výjimka: " + err;
-      }
-    }
-
-    // Volitelně načti témata
-    async function loadTopics() {
-      try {
-        const token = localStorage.getItem("token") || "";
-        const res = await fetch("/knowledge/topics", {
-          headers: {
-            "Authorization": "Bearer " + token
-          }
-        });
-        const data = await res.json();
-        const topicSelect = document.getElementById("knowledge-topic");
-        for (const key of Object.keys(data)) {
-          const opt = document.createElement("option");
-          opt.value = key;
-          opt.textContent = key;
-          topicSelect.appendChild(opt);
-        }
-      } catch (e) {
-        console.warn("Nepodařilo se načíst témata.");
-      }
-    }
-
-    loadTopics();
-  </script>
+    <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea><br>
+    <input type="file" id="file"><br>
+    <label><input type="checkbox" id="save-txt"> Uložit odpověď do txt</label><br>
+    <label><input type="checkbox" id="memory-private"> Soukromá</label><br>
+    <div id="topic-checkboxes"></div>
+    <button onclick="ask()">Odeslat</button>
+    <pre id="activity"></pre>
+    <!-- …další panely s historií, debugem a správou paměti… -->
+  </div>
 </body>
 </html>
