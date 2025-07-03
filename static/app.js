@@ -29,7 +29,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function authHeader() {
     const token = localStorage.getItem('token') || '';
-    return token ? { 'Authorization': 'Bearer ' + token } : {};
+    const key = localStorage.getItem('apikey') || '';
+    const headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    if (key) headers['X-API-Key'] = key;
+    return headers;
+  }
+
+  async function doLogin() {
+    const nick = document.getElementById('nick').value;
+    const password = document.getElementById('password').value;
+    const apiKey = document.getElementById('apikey').value;
+    document.getElementById('login-status').textContent = '⏳ Logging in…';
+    try {
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nick, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        localStorage.setItem('token', data.token);
+        if (apiKey) localStorage.setItem('apikey', apiKey);
+        else localStorage.removeItem('apikey');
+        document.getElementById('token-display').textContent = data.token;
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('interface').style.display = 'block';
+        loadModel();
+        loadTopics();
+      } else {
+        document.getElementById('login-status').textContent = '❌ ' + (data.error || res.status);
+      }
+    } catch (err) {
+      document.getElementById('login-status').textContent = '❌ ' + err;
+    }
+  }
+
+  function copyToken() {
+    const token = localStorage.getItem('token') || '';
+    if (token) navigator.clipboard.writeText(token);
   }
 
   async function loadModel() {
@@ -205,6 +243,9 @@ document.addEventListener('DOMContentLoaded', () => {
   window.showCorrection = () => {
     document.getElementById('correction').style.display = 'block';
   };
+  window.doLogin = doLogin;
+  window.copyToken = copyToken;
+  window.authHeader = authHeader;
 
   const modelSelect = document.getElementById('model-select');
   if (modelSelect) {
@@ -215,6 +256,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  loadModel();
-  loadTopics();
+  const storedToken = localStorage.getItem('token');
+  const loginDiv = document.getElementById('login');
+  const interfaceDiv = document.getElementById('interface');
+  if (storedToken) {
+    if (loginDiv) loginDiv.style.display = 'none';
+    if (interfaceDiv) interfaceDiv.style.display = 'block';
+    document.getElementById('token-display').textContent = storedToken;
+    loadModel();
+    loadTopics();
+  } else {
+    if (loginDiv) loginDiv.style.display = 'block';
+    if (interfaceDiv) interfaceDiv.style.display = 'none';
+  }
 });
