@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadModel() {
+    setProgress(true);
     try {
       const res = await fetch('/model', { headers: authHeader() });
       const data = await res.json();
@@ -44,6 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('model-desc').textContent = info ? info.desc : '';
     } catch (err) {
       console.error(err);
+    } finally {
+      setProgress(false);
     }
   }
 
@@ -51,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('model-select');
     const model = select.value;
     document.getElementById('model-status').textContent = '⏳ Switching…';
+    setProgress(true);
     try {
       const res = await fetch('/model', {
         method: 'POST',
@@ -68,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       document.getElementById('model-status').textContent = '❌ ' + err;
+    } finally {
+      setProgress(false);
     }
   }
 
@@ -77,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadTopics() {
+    setProgress(true);
     try {
       const res = await fetch('/knowledge/topics', { headers: authHeader() });
       const data = await res.json();
@@ -97,6 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setProgress(false);
     }
   }
 
@@ -168,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const payload = { agree: type === 'good', question, answer };
     if (type === 'bad') payload.correction = correction;
     document.getElementById('feedback-status').textContent = '⏳ Odesílám…';
+    setProgress(true);
     try {
       const res = await fetch('/feedback', {
         method: 'POST',
@@ -182,6 +192,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       document.getElementById('feedback-status').textContent = '❌ ' + err;
+    } finally {
+      setProgress(false);
     }
   }
 
