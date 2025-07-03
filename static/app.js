@@ -27,6 +27,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  let DEVLAB_URL = '';
+  let useDevlab = false;
+  const originalFetch = window.fetch.bind(window);
+
+  function envFetch(url, opts) {
+    if (useDevlab && DEVLAB_URL && typeof url === 'string' && url.startsWith('/')) {
+      return originalFetch(DEVLAB_URL + url, opts);
+    }
+    return originalFetch(url, opts);
+  }
+
+  window.fetch = envFetch;
+
+  function updateEnvDisplay() {
+    const info = document.getElementById('env-info');
+    const btn = document.getElementById('env-toggle');
+    if (info) info.textContent = useDevlab ? 'devlab' : 'local';
+    if (btn) btn.textContent = useDevlab ? 'Use Local' : 'Use DevLab';
+  }
+
+  function toggleEnv() {
+    if (!DEVLAB_URL) return;
+    useDevlab = !useDevlab;
+    updateEnvDisplay();
+  }
+
+  async function initEnv() {
+    try {
+      const res = await originalFetch('/devlab_config.json');
+      if (res.ok) {
+        const cfg = await res.json();
+        if (cfg && cfg.url) {
+          DEVLAB_URL = String(cfg.url).replace(/\/$/, '');
+          const btn = document.getElementById('env-toggle');
+          if (btn) btn.style.display = 'inline';
+        }
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    updateEnvDisplay();
+  }
+
   function authHeader() {
     const token = localStorage.getItem('token') || '';
     const key = localStorage.getItem('apikey') || '';
@@ -246,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.doLogin = doLogin;
   window.copyToken = copyToken;
   window.authHeader = authHeader;
+  window.toggleEnv = toggleEnv;
 
   const modelSelect = document.getElementById('model-select');
   if (modelSelect) {
@@ -255,6 +299,8 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('model-desc').textContent = info ? info.desc : '';
     });
   }
+
+  initEnv();
 
   const storedToken = localStorage.getItem('token');
   const loginDiv = document.getElementById('login');
