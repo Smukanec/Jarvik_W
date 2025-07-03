@@ -68,7 +68,7 @@
       color: #00ff00;
       margin-top: 1em;
     }
-    #log, #status, #debug, #activity {
+    #log, #status, #debug, #activity, #progress {
       max-height: 300px;
       overflow-y: auto;
     }
@@ -129,6 +129,7 @@
   <div id="topic-checkboxes"></div>
   <button onclick="ask()">Odeslat</button>
   <pre id="activity"></pre>
+  <div id="progress" style="display:none">⏳ Čekejte…</div>
 
   <div id="panels">
     <div class="panel" id="response-panel">
