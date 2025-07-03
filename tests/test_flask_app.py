@@ -234,7 +234,8 @@ def test_public_memory_when_flag_false_file(client):
 
 
 def test_ask_file_save_creates_file(client):
-    import main, os
+    import main
+    import os
     res = client.post(
         "/ask_file",
         data={"message": "save this", "save": "1"},
