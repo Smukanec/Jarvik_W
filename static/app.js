@@ -76,12 +76,39 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el) el.style.display = on ? 'block' : 'none';
   }
 
+  async function loadTopics() {
+    try {
+      const res = await fetch('/knowledge/topics', { headers: authHeader() });
+      const data = await res.json();
+      const topics = Array.isArray(data) ? data : Object.keys(data);
+      const container = document.getElementById('topic-checkboxes');
+      if (container) {
+        container.innerHTML = '';
+        topics.forEach(t => {
+          const label = document.createElement('label');
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.value = t;
+          label.appendChild(cb);
+          label.appendChild(document.createTextNode(' ' + t));
+          container.appendChild(label);
+          container.appendChild(document.createElement('br'));
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   async function ask() {
     const msg = document.getElementById('message').value;
     const fileInput = document.getElementById('file');
     const file = fileInput.files[0];
     const isPrivate = document.getElementById('memory-private').checked;
     const save = document.getElementById('save-txt').checked;
+    const topics = Array.from(
+      document.querySelectorAll('#topic-checkboxes input:checked')
+    ).map(cb => cb.value);
 
     setProgress(true);
     document.getElementById('activity').textContent = '⏳ Čekejte…';
@@ -93,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         form.append('message', msg);
         form.append('file', file);
         form.append('private', isPrivate ? '1' : '0');
+        if (topics.length) form.append('topics', topics.join(','));
         if (save) form.append('save', '1');
         const res = await fetch('/ask_file', {
           method: 'POST',
@@ -101,10 +129,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         data = await res.json();
       } else {
+        const payload = { message: msg, private: isPrivate };
+        if (topics.length) payload.topics = topics;
         const res = await fetch('/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeader() },
-          body: JSON.stringify({ message: msg, private: isPrivate })
+          body: JSON.stringify(payload)
         });
         data = await res.json();
       }
@@ -174,4 +204,5 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   loadModel();
+  loadTopics();
 });
