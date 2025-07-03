@@ -3,6 +3,12 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR" || exit
 set -e
 
+# Update DevLab submodule if possible
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "🔄 Stahuji DevLab submodul..."
+  git submodule update --init --recursive
+fi
+
 # Optional cleanup
 if [ "$1" == "--clean" ]; then
   bash "$DIR/uninstall_jarvik.sh"
