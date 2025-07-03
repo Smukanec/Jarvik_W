@@ -9,7 +9,7 @@ FLASK_PORT=${FLASK_PORT:-8010}
 cd "$(dirname "$0")" || exit
 
 # Model name can be overridden with the MODEL_NAME environment variable
-MODEL_NAME=${MODEL_NAME:-"gemma:2b"}
+MODEL_NAME=${MODEL_NAME:-"openchat"}
 # Log file for the model output
 MODEL_LOG="${MODEL_NAME//:/_}.log"
 # Allow API mode when MODEL_NAME or MODEL_MODE indicate so

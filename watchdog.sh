@@ -1,7 +1,7 @@
 #!/bin/bash
 
 FLASK_PORT=${FLASK_PORT:-8010}
-MODEL_NAME=${MODEL_NAME:-"gemma:2b"}
+MODEL_NAME=${MODEL_NAME:-"openchat"}
 MODEL_LOG="${MODEL_NAME//:/_}.log"
 
 GREEN="\033[1;32m"
