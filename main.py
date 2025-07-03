@@ -28,6 +28,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from datetime import datetime
+from typing import Any
 
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "openchat")
@@ -338,13 +339,54 @@ def reload_memory(folders: list[str] | None = None) -> None:
         memory_caches[folder] = _read_memory_file(folder)
 
 
-def append_to_memory(user_msg: str, ai_response: str, folder: str = DEFAULT_MEMORY_FOLDER) -> None:
+def append_to_memory(
+    user_msg: str,
+    ai_response: str,
+    folder: str = DEFAULT_MEMORY_FOLDER,
+    *,
+    context: str | None = None,
+    date: str | None = None,
+    time: str | None = None,
+    attachments: list[str] | None = None,
+) -> None:
+    """Append a conversation entry to the memory log."""
+
+    now = datetime.utcnow()
+    now_date = date or now.date().isoformat()
+    now_time = time or now.time().isoformat(timespec="seconds")
+    now_iso = f"{now_date}T{now_time}"
+
     entry = {"user": user_msg, "jarvik": ai_response}
+    if context:
+        entry["context"] = context
+    if attachments:
+        entry["attachments"] = attachments
+
     path, lock = _ensure_memory(folder)
     cache = memory_caches.setdefault(folder, _read_memory_file(folder))
-    now_iso = datetime.utcnow().isoformat()
-    entry_user = {"timestamp": now_iso, "role": "user", "message": user_msg}
-    entry_assist = {"timestamp": now_iso, "role": "assistant", "message": ai_response}
+
+    entry_user = {
+        "timestamp": now_iso,
+        "role": "user",
+        "message": user_msg,
+        "context": context,
+        "date": now_date,
+        "time": now_time,
+    }
+    if attachments:
+        entry_user["attachments"] = attachments
+
+    entry_assist = {
+        "timestamp": now_iso,
+        "role": "assistant",
+        "message": ai_response,
+        "context": context,
+        "date": now_date,
+        "time": now_time,
+    }
+    if attachments:
+        entry_assist["attachments"] = attachments
+
     with lock:
         cache.append(entry)
         with open(path, "a", encoding="utf-8") as f:
@@ -365,9 +407,31 @@ def _flush_memory_locked(folder: str) -> None:
     lines = cache
     with open(path, "w", encoding="utf-8") as f:
         for item in lines:
-            now_iso = datetime.utcnow().isoformat()
-            f.write(json.dumps({"timestamp": now_iso, "role": "user", "message": item.get("user", "")}) + "\n")
-            f.write(json.dumps({"timestamp": now_iso, "role": "assistant", "message": item.get("jarvik", "")}) + "\n")
+            now = datetime.utcnow()
+            now_date = now.date().isoformat()
+            now_time = now.time().isoformat(timespec="seconds")
+            now_iso = f"{now_date}T{now_time}"
+            extra: dict[str, Any] = {}
+            if "context" in item and item["context"]:
+                extra["context"] = item["context"]
+            if "attachments" in item and item["attachments"]:
+                extra["attachments"] = item["attachments"]
+            f.write(json.dumps({
+                "timestamp": now_iso,
+                "role": "user",
+                "message": item.get("user", ""),
+                "date": now_date,
+                "time": now_time,
+                **extra,
+            }) + "\n")
+            f.write(json.dumps({
+                "timestamp": now_iso,
+                "role": "assistant",
+                "message": item.get("jarvik", ""),
+                "date": now_date,
+                "time": now_time,
+                **extra,
+            }) + "\n")
 
 
 @app.route("/login", methods=["POST"])
@@ -638,6 +702,7 @@ def ask_file():
 
     save = request.form.get("save")
     download_url = None
+    attachments = [uploaded.filename] if uploaded and uploaded.filename else None
     if save:
         os.makedirs(ANSWER_DIR, exist_ok=True)
         out_name = f"{secrets.token_hex(8)}.txt"
@@ -652,12 +717,27 @@ def ask_file():
                     f" (soubor {uploaded.filename})" if uploaded and uploaded.filename else ""
                 )
             )
-            append_to_memory(message, note, folder=target_folder)
+            append_to_memory(
+                message,
+                note,
+                folder=target_folder,
+                attachments=attachments,
+            )
         except Exception as e:
             debug_log.append(f"Chyba při vytváření souboru: {e}")
-            append_to_memory(message, output, folder=target_folder)
+            append_to_memory(
+                message,
+                output,
+                folder=target_folder,
+                attachments=attachments,
+            )
     else:
-        append_to_memory(message, output, folder=target_folder)
+        append_to_memory(
+            message,
+            output,
+            folder=target_folder,
+            attachments=attachments,
+        )
 
     resp = {"response": output, "debug": debug_log}
     if download_url:
@@ -685,7 +765,15 @@ def memory_add():
     user: User | None = getattr(g, "current_user", None)
     private = str(data.get("private", "true")).lower() in {"1", "true", "yes"}
     folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
-    append_to_memory(user_msg, jarvik_msg, folder=folder)
+    append_to_memory(
+        user_msg,
+        jarvik_msg,
+        folder=folder,
+        context=data.get("context"),
+        date=data.get("date"),
+        time=data.get("time"),
+        attachments=data.get("attachments"),
+    )
     return jsonify({"status": "ok"})
 
 @app.route("/memory/search")
@@ -851,7 +939,7 @@ def knowledge_upload():
         f'Popis: {description}\n'
         'Tento záznam pomůže Jarvikovi při budoucím vyhledávání.'
     )
-    append_to_memory("", msg, folder=folder)
+    append_to_memory("", msg, folder=folder, attachments=[name])
 
     return jsonify({"status": "saved", "file": name})
 

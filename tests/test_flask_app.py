@@ -79,9 +79,27 @@ def client(monkeypatch, tmp_path):
     monkeypatch.setattr(main, "ANSWER_DIR", str(tmp_path / "answers"))
     os.makedirs(main.ANSWER_DIR, exist_ok=True)
 
-    def dummy_append(user_msg, ai_response, folder=main.DEFAULT_MEMORY_FOLDER):
+    def dummy_append(
+        user_msg,
+        ai_response,
+        folder=main.DEFAULT_MEMORY_FOLDER,
+        *,
+        context=None,
+        date=None,
+        time=None,
+        attachments=None,
+    ):
         cache = main.memory_caches.setdefault(folder, [])
-        cache.append({"user": user_msg, "jarvik": ai_response})
+        entry = {"user": user_msg, "jarvik": ai_response}
+        if context:
+            entry["context"] = context
+        if date:
+            entry["date"] = date
+        if time:
+            entry["time"] = time
+        if attachments:
+            entry["attachments"] = attachments
+        cache.append(entry)
 
     monkeypatch.setattr(main, "append_to_memory", dummy_append)
     monkeypatch.setattr(main, "_flush_memory_locked", lambda folder: None)
@@ -250,6 +268,7 @@ def test_ask_file_save_creates_file(client):
     entry = main.memory_caches["bob"][-1]
     assert entry["user"] == "save this"
     assert "odpověď uložena" in entry["jarvik"]
+    assert "attachments" not in entry
 
 
 def test_per_user_knowledge_folders(client):
@@ -292,11 +311,20 @@ def test_memory_add(client):
     import main
     res = client.post(
         "/memory/add",
-        json={"user": "q", "jarvik": "a"},
+        json={
+            "user": "q",
+            "jarvik": "a",
+            "context": "ctx",
+            "attachments": ["f.txt"],
+        },
         headers=_auth(),
     )
     assert res.status_code == 200
-    assert {"user": "q", "jarvik": "a"} in main.memory_caches["bob"]
+    entry = main.memory_caches["bob"][-1]
+    assert entry["user"] == "q"
+    assert entry["jarvik"] == "a"
+    assert entry.get("context") == "ctx"
+    assert entry.get("attachments") == ["f.txt"]
 
 
 def test_memory_add_public(client):
@@ -540,6 +568,7 @@ def test_knowledge_upload_records_description(client, monkeypatch, tmp_path):
     entry = main.memory_caches["bob"][-1]
     assert "Byl vložen znalostní soubor" in entry["jarvik"]
     assert "some info" in entry["jarvik"]
+    assert entry.get("attachments") == ["note.txt"]
 
 
 def test_knowledge_upload_creates_meta(client, monkeypatch, tmp_path):
