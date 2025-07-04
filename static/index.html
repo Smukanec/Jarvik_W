@@ -216,7 +216,7 @@
           body: formData
         });
 
-        const data = await res.json();
+        const data = await safeJson(res);
         if (data.status === "saved") {
           document.getElementById("knowledge-status").textContent = `✅ Soubor uložen jako: ${data.file}`;
         } else {
