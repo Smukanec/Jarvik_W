@@ -32,3 +32,20 @@ def test_search_and_scrape(monkeypatch):
     out = web_search.search_and_scrape("hello")
     assert "http://example.com" in out
     assert "Hello" in out
+
+
+def test_search_and_scrape_handles_exception(monkeypatch):
+    class DummyDDGS:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            pass
+
+        def text(self, q, max_results=1, **kwargs):
+            raise web_search.DuckDuckGoSearchException("ratelimit")
+
+    monkeypatch.setattr(web_search, "DDGS", DummyDDGS)
+
+    out = web_search.search_and_scrape("boom")
+    assert "\u26a0" in out

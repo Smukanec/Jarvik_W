@@ -1,12 +1,20 @@
-from duckduckgo_search import DDGS
+from duckduckgo_search import DDGS, DuckDuckGoSearchException
 import requests
 from bs4 import BeautifulSoup
 
 
 def search_and_scrape(query: str, max_results: int = 1) -> str:
-    """Return the first search result text for *query*."""
+    """Return the first search result text for *query*.
+
+    Any network failures during search are swallowed and an empty result is
+    returned. This prevents the caller from crashing when DuckDuckGo blocks
+    the request (for example, due to rate limiting).
+    """
     with DDGS() as ddgs:
-        results = list(ddgs.text(query, max_results=max_results))
+        try:
+            results = list(ddgs.text(query, max_results=max_results))
+        except DuckDuckGoSearchException:
+            results = []
     if not results:
         return "\u26a0\ufe0f \u017d\u00e1dn\u00e9 v\u00fdsledky nenalezeny."
 
