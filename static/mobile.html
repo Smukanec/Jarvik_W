@@ -62,13 +62,43 @@
     <p id="model-desc"></p>
     <pre id="model-status"></pre>
 
+    <div id="env-switch" style="display:none">
+      Environment: <span id="env-info"></span>
+      <button id="env-toggle" onclick="toggleEnv()"></button>
+    </div>
+
+    <pre id="token-display" style="display:none"></pre>
+    <button onclick="copyToken()" style="display:none">Copy token</button>
+
     <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea>
     <input type="file" id="file">
+    <label style="display:none"><input type="checkbox" id="save-txt"> Uložit odpověď do txt</label>
+    <label style="display:none"><input type="checkbox" id="memory-private"> Soukromá</label>
+    <div id="topic-checkboxes" style="display:none"></div>
     <button onclick="ask()">Odeslat</button>
     <pre id="activity"></pre>
+    <div id="progress" style="display:none">⏳ Čekejte…</div>
 
     <h3>Odpověď</h3>
     <pre id="response"></pre>
+    <a id="download" style="display:none" href="#">⬇️ Stáhnout odpověď</a>
+    <div id="feedback" style="display:none">
+      <button onclick="sendFeedback('good')">👍</button>
+      <button onclick="sendFeedback('bad')">👎</button>
+      <button onclick="showCorrection()">✏️ Opravit</button>
+      <div id="correction" style="display:none">
+        <textarea id="correction-text" rows="3" placeholder="Navržená odpověď…"></textarea>
+        <button onclick="submitCorrection()">Odeslat</button>
+      </div>
+      <pre id="feedback-status"></pre>
+    </div>
+    <pre id="debug" style="display:none"></pre>
+
+    <input type="file" id="knowledge-file" style="display:none">
+    <label style="display:none"><input type="checkbox" id="knowledge-private"> Soukromá</label>
+    <select id="knowledge-topic" style="display:none"></select>
+    <input id="knowledge-desc" style="display:none" placeholder="Popis souboru">
+    <pre id="knowledge-status" style="display:none"></pre>
   </div>
 
   <script src="/static/app.js"></script>
