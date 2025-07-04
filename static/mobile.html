@@ -1,7 +1,76 @@
 <!DOCTYPE html>
 <html lang="cs">
-<head><meta charset="UTF-8"><title>Jarvik – mobil</title></head>
-<body style="background:#121212;color:#c8f6c8;font-family:sans-serif">
-<h1>Jarvik</h1>
-<p>Mobilní verze rozhraní bude brzy dostupná.</p>
-</body></html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Jarvik – mobile</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #121212;
+      color: #c8f6c8;
+      margin: 0;
+      padding: 1em;
+    }
+    input, select, textarea, button {
+      font-size: 1em;
+      width: 100%;
+      box-sizing: border-box;
+      margin: 0.5em 0;
+      padding: 0.5em;
+      border-radius: 4px;
+    }
+    textarea, input, select {
+      background-color: #1e1e1e;
+      color: #c8f6c8;
+      border: 1px solid #00aa00;
+    }
+    button {
+      background-color: #00aa00;
+      color: white;
+      border: none;
+    }
+    pre {
+      background-color: #1e1e1e;
+      border: 1px solid #2e7d32;
+      padding: 1em;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div id="login" style="display:none">
+    <input id="nick" placeholder="nick"><br>
+    <input id="password" type="password" placeholder="password"><br>
+    <input id="apikey" placeholder="API key (optional)"><br>
+    <button onclick="doLogin()">Login</button>
+    <pre id="login-status"></pre>
+  </div>
+
+  <div id="interface" style="display:none">
+    <h2>Running model: <span id="current-model">?</span></h2>
+    <select id="model-select">
+      <option value="openchat" title="Chytrý AI asistent. Vhodný pro běžné otázky, dialog a porozumění pokynům.">OpenChat – chytrý AI asistent 🌐</option>
+      <option value="llama3:8b" title="Vysoká přesnost, vhodný pro složitější dotazy, rozumí webovému obsahu i dokumentům.">LLaMA 3 8B – velký jazykový model 🌐</option>
+      <option value="nous-hermes2" title="Dobře zvládá otázky, formální texty i instrukce, vhodný i pro složitější dotazy s doplněním z internetu.">Nous Hermes 2 – jemně doladěný Mistral 🌐</option>
+      <option value="command-r" title="Optimalizovaný pro programování, Python, shell, kódové úkoly.">Command R – model pro RAG 🌐</option>
+      <option value="api" title="Externí API – dotazy jsou posílány do API.">Externí API</option>
+    </select>
+    <button onclick="switchModel()">Switch model</button>
+    <p id="model-desc"></p>
+    <pre id="model-status"></pre>
+
+    <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea>
+    <input type="file" id="file">
+    <button onclick="ask()">Odeslat</button>
+    <pre id="activity"></pre>
+
+    <h3>Odpověď</h3>
+    <pre id="response"></pre>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

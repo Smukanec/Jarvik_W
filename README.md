@@ -391,6 +391,9 @@ immediately.
 The token is shown in the web interface and can be copied with a button after
 logging in.
 
+A mobile-friendly version is available at `/mobile`. Open this URL on your
+phone or tablet for a simplified interface.
+
 ## Running Tests
 
 Unit tests live in the `tests/` directory. Install the development
