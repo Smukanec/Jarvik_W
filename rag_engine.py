@@ -3,6 +3,7 @@ import glob
 import re
 import unicodedata
 import difflib
+import logging
 from typing import List
 
 # Optional dependency --------------------------------------------------------
@@ -81,7 +82,7 @@ def _load_folder(folder: str) -> List[str]:
             for para in _split_paragraphs(content):
                 chunks.append(para)
         except Exception as e:  # pragma: no cover - just log errors
-            print(f"❌ Nelze načíst {path}: {e}")
+            logging.error("❌ Nelze načíst %s: %s", path, e)
     return chunks
 
 

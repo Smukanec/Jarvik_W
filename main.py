@@ -150,6 +150,27 @@ except ValueError:
 # Set base directory relative to this file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# --- App logging setup ----------------------------------------------------
+MAX_LOG_BYTES = int(os.getenv("MAX_LOG_BYTES", str(1024 * 1024)))
+LOG_BACKUPS = int(os.getenv("LOG_BACKUPS", "3"))
+APP_LOG_PATH = os.path.join(BASE_DIR, "jarvik.log")
+_app_handler = RotatingFileHandler(
+    APP_LOG_PATH,
+    maxBytes=MAX_LOG_BYTES,
+    backupCount=LOG_BACKUPS,
+    encoding="utf-8",
+)
+_app_handler.setFormatter(
+    logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+)
+_root_logger = logging.getLogger()
+_root_logger.setLevel(logging.INFO)
+if not any(
+    isinstance(h, RotatingFileHandler) and getattr(h, "baseFilename", None) == APP_LOG_PATH
+    for h in _root_logger.handlers
+):
+    _root_logger.addHandler(_app_handler)
+
 # --- Prompt logging setup -------------------------------------------------
 # Limit prompt log size and enable rotation
 MAX_PROMPT_LOG_BYTES = int(os.getenv("MAX_PROMPT_LOG_BYTES", str(1024 * 1024)))
@@ -243,7 +264,7 @@ KNOWLEDGE_DIR = os.getenv("KNOWLEDGE_DIR", os.path.join(BASE_DIR, "knowledge"))
 PUBLIC_KNOWLEDGE_FOLDER = KNOWLEDGE_DIR
 knowledge = KnowledgeBase(PUBLIC_KNOWLEDGE_FOLDER)
 user_knowledge: dict[str, KnowledgeBase] = {}
-print("✅ Znalosti načteny.")
+logging.info("✅ Znalosti načteny.")
 
 
 def get_knowledge_base(user: User | None) -> KnowledgeBase:
@@ -833,7 +854,7 @@ def knowledge_reload():
     kb.reload()
     folders = [user.nick] + user.memory_folders if user else None
     reload_memory(folders)
-    print("✅ Znalosti načteny.")
+    logging.info("✅ Znalosti načteny.")
     return jsonify({"status": "reloaded", "chunks": len(kb.chunks)})
 
 
