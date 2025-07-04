@@ -1088,6 +1088,11 @@ def model_route():
 def index():
     return app.send_static_file("index.html")
 
+
+@app.route("/mobile")
+def mobile_index():
+    return app.send_static_file("mobile.html")
+
 @app.route("/static/<path:path>")
 def static_files(path):
     return app.send_static_file(path)

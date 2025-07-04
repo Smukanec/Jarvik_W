@@ -13,6 +13,8 @@ Ollama instance if it is not running locally (defaults to
 scripts will not attempt to launch a local Ollama instance and all `ollama`
 commands automatically use the remote server.
 
+Access a simplified mobile interface by navigating to `/mobile` on your device.
+
 ## Installation
 
 Install dependencies and create the virtual environment:
