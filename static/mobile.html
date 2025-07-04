@@ -59,7 +59,7 @@
       <option value="api" title="Externí API – dotazy jsou posílány do API.">Externí API</option>
     </select>
     <button onclick="switchModel()">Switch model</button>
-    <p id="model-desc"></p>
+    <p id="model-desc" style="display:none"></p>
     <pre id="model-status"></pre>
 
     <div id="env-switch" style="display:none">
@@ -76,7 +76,7 @@
     <label style="display:none"><input type="checkbox" id="memory-private"> Soukromá</label>
     <div id="topic-checkboxes" style="display:none"></div>
     <button onclick="ask()">Odeslat</button>
-    <pre id="activity"></pre>
+    <pre id="activity" style="display:none"></pre>
     <div id="progress" style="display:none">⏳ Čekejte…</div>
 
     <h3>Odpověď</h3>
