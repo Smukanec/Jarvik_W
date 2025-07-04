@@ -40,6 +40,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.fetch = envFetch;
 
+  async function safeJson(res) {
+    const txt = await res.text();
+    try {
+      return JSON.parse(txt);
+    } catch (_) {
+      console.error('Invalid JSON response:', txt);
+      throw new Error('Server returned invalid response');
+    }
+  }
+
   function updateEnvDisplay() {
     const info = document.getElementById('env-info');
     const btn = document.getElementById('env-toggle');
@@ -117,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setProgress(true);
     try {
       const res = await fetch('/model', { headers: authHeader() });
-      const data = await res.json();
+      const data = await safeJson(res);
       const model = data.model || '';
       document.getElementById('current-model').textContent = model;
       const select = document.getElementById('model-select');
@@ -142,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify({ model })
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (res.ok) {
         document.getElementById('model-status').textContent = '🔄 Restarting…';
         document.getElementById('current-model').textContent = model;
@@ -217,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
           headers: authHeader(),
           body: form
         });
-        data = await res.json();
+        data = await safeJson(res);
       } else {
         const payload = { message: msg, private: isPrivate };
         if (topics.length) payload.topics = topics;
@@ -226,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
           headers: { 'Content-Type': 'application/json', ...authHeader() },
           body: JSON.stringify(payload)
         });
-        data = await res.json();
+        data = await safeJson(res);
       }
 
       if (data.response) {
@@ -268,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (res.ok) {
         document.getElementById('feedback-status').textContent = '✅ Díky za hodnocení';
       } else {
-        const data = await res.json();
+        const data = await safeJson(res);
         document.getElementById('feedback-status').textContent = '❌ ' + (data.error || res.status);
       }
     } catch (err) {
@@ -290,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.copyToken = copyToken;
   window.authHeader = authHeader;
   window.toggleEnv = toggleEnv;
+  window.safeJson = safeJson;
 
   const modelSelect = document.getElementById('model-select');
   if (modelSelect) {
