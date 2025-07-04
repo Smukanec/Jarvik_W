@@ -1,4 +1,8 @@
-from duckduckgo_search import DDGS, DuckDuckGoSearchException
+try:
+    from duckduckgo_search import DDGS, DuckDuckGoSearchException
+except ImportError:  # older versions don't expose DuckDuckGoSearchException
+    from duckduckgo_search import DDGS  # type: ignore
+    DuckDuckGoSearchException = Exception  # type: ignore
 import requests
 from bs4 import BeautifulSoup
 
