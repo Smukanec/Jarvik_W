@@ -296,11 +296,49 @@ document.addEventListener('DOMContentLoaded', () => {
   window.showCorrection = () => {
     document.getElementById('correction').style.display = 'block';
   };
+
+  async function uploadKnowledge() {
+    const fileInput = document.getElementById('knowledge-file');
+    const file = fileInput.files[0];
+    if (!file) {
+      document.getElementById('knowledge-status').textContent = '❌ Vyber soubor.';
+      return;
+    }
+
+    const isPrivate = document.getElementById('knowledge-private').checked;
+    const description = document.getElementById('knowledge-desc').value;
+    const topicSelect = document.getElementById('knowledge-topic');
+    const topic = topicSelect.value || '';
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('private', isPrivate ? 'true' : 'false');
+    formData.append('description', description);
+    formData.append('topic', topic);
+
+    try {
+      const res = await fetch('/knowledge/upload', {
+        method: 'POST',
+        headers: authHeader(),
+        body: formData,
+      });
+
+      const data = await safeJson(res);
+      if (data.status === 'saved') {
+        document.getElementById('knowledge-status').textContent = `✅ Soubor uložen jako: ${data.file}`;
+      } else {
+        document.getElementById('knowledge-status').textContent = '❌ Chyba: ' + JSON.stringify(data);
+      }
+    } catch (err) {
+      document.getElementById('knowledge-status').textContent = '❌ Výjimka: ' + err;
+    }
+  }
   window.doLogin = doLogin;
   window.copyToken = copyToken;
   window.authHeader = authHeader;
   window.toggleEnv = toggleEnv;
   window.safeJson = safeJson;
+  window.uploadKnowledge = uploadKnowledge;
 
   const modelSelect = document.getElementById('model-select');
   if (modelSelect) {
