@@ -1,8 +1,12 @@
 import subprocess
 import textwrap
+import shutil
+import pytest
 
 
 def test_safe_json_html():
+    if shutil.which("node") is None:
+        pytest.skip("Node.js not found")
     script = textwrap.dedent("""
     async function safeJson(res) {
       const txt = await res.text();
