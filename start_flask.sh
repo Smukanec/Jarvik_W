@@ -28,4 +28,4 @@ else
 fi
 
 # Spuštění Flasku
-python main.py &
+python main.py
