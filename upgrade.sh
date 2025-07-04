@@ -44,6 +44,14 @@ fi
 if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if [ -n "$(git remote)" ]; then
     echo -e "${GREEN}🔄 Stahuji nejnovější verzi...${NC}"
+    # Force overwrite local files with the remote branch
+    # WARNING: this discards any uncommitted changes
+    echo -e "${GREEN}⚠️  Neuložené změny budou ztraceny.${NC}"
+    remote="$(git remote | head -n 1)"
+    branch="$(git branch --show-current)"
+    git fetch "$remote"
+    git reset --hard "$remote/$branch"
+    git clean -fd
     BEFORE_HASH="$(sha256sum "$0" | awk '{print $1}')"
     if git pull; then
       git submodule update --init --recursive

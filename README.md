@@ -311,6 +311,8 @@ bash upgrade.sh
 ```
 
 The script pulls the newest repository files, performs an uninstall, installs the dependencies again, reloads the shell aliases and starts all components.
+Note that the upgrade process forcefully resets the repository to the remote branch,
+so any uncommitted changes will be lost.
 
 ## API Usage
 
