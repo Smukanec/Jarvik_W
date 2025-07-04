@@ -446,7 +446,7 @@ environment is shown next to the button.
 
 ### 🧩 DevLab submodule
 
-Tento projekt obsahuje vývojový modul `DevLab` jako Git submodul.
+Tento projekt obsahuje vývojový modul [`DevLab`](https://github.com/Smukanec/JARVIK_DevLab) jako Git submodul.
 Po naklonování nezapomeň spustit:
 
 ```bash
