@@ -806,3 +806,11 @@ def test_knowledge_reject_moves_file(client, monkeypatch, tmp_path):
         meta = json.load(f)
     assert meta["status"] == "rejected"
 
+
+
+def test_mobile_page(client):
+    res = client.get("/mobile")
+    assert res.status_code == 200
+    assert "text/html" in res.content_type
+    assert "<!DOCTYPE html>" in res.get_data(as_text=True)
+
