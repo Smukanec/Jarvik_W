@@ -164,5 +164,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('correction').style.display = 'block';
   };
 
+  const select = document.getElementById('model-select');
+  if (select) {
+    select.addEventListener('change', () => {
+      const model = select.value;
+      const info = MODEL_INFO[model];
+      document.getElementById('model-desc').textContent = info ? info.desc : '';
+    });
+  }
+
   loadModel();
 });
