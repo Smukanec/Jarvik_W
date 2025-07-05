@@ -333,12 +333,123 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('knowledge-status').textContent = '❌ Výjimka: ' + err;
     }
   }
+
+  async function loadPending() {
+    const list = document.getElementById('pending-list');
+    if (list) list.innerHTML = '';
+    document.getElementById('status').textContent = '⏳ Načítám…';
+    try {
+      const res = await fetch('/knowledge/pending', { headers: authHeader() });
+      const data = await safeJson(res);
+      if (res.ok) {
+        if (Array.isArray(data) && list) {
+          data.forEach(item => {
+            const li = document.createElement('li');
+            const file = item.file || item.name || '';
+            li.textContent = file + ' ';
+            const appr = document.createElement('button');
+            appr.textContent = '✔';
+            appr.onclick = () => approvePending(file);
+            const rej = document.createElement('button');
+            rej.textContent = '✖';
+            rej.onclick = () => rejectPending(file);
+            li.appendChild(appr);
+            li.appendChild(rej);
+            list.appendChild(li);
+          });
+        }
+        document.getElementById('status').textContent = `✅ Načteno: ${data.length}`;
+      } else {
+        document.getElementById('status').textContent = '❌ ' + (data.error || res.status);
+      }
+    } catch (err) {
+      document.getElementById('status').textContent = '❌ ' + err;
+    }
+  }
+
+  async function approvePending(file) {
+    document.getElementById('status').textContent = '⏳ Schvaluji…';
+    try {
+      const res = await fetch('/knowledge/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ file })
+      });
+      const data = await safeJson(res);
+      if (res.ok) {
+        document.getElementById('status').textContent = '✅ Schváleno';
+        loadPending();
+      } else {
+        document.getElementById('status').textContent = '❌ ' + (data.error || res.status);
+      }
+    } catch (err) {
+      document.getElementById('status').textContent = '❌ ' + err;
+    }
+  }
+
+  async function rejectPending(file) {
+    document.getElementById('status').textContent = '⏳ Přesouvám…';
+    try {
+      const res = await fetch('/knowledge/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ file })
+      });
+      const data = await safeJson(res);
+      if (res.ok) {
+        document.getElementById('status').textContent = '✅ Zamítnuto';
+        loadPending();
+      } else {
+        document.getElementById('status').textContent = '❌ ' + (data.error || res.status);
+      }
+    } catch (err) {
+      document.getElementById('status').textContent = '❌ ' + err;
+    }
+  }
+
+  async function deleteByTime() {
+    const from = document.getElementById('delete-from').value;
+    const to = document.getElementById('delete-to').value;
+    document.getElementById('delete-status').textContent = '⏳ Mažu…';
+    try {
+      const res = await fetch('/memory/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ from, to })
+      });
+      const data = await safeJson(res);
+      document.getElementById('delete-status').textContent = res.ok ? data.message : '❌ ' + (data.error || res.status);
+    } catch (err) {
+      document.getElementById('delete-status').textContent = '❌ ' + err;
+    }
+  }
+
+  async function deleteByKeyword() {
+    const keyword = document.getElementById('delete-keyword').value;
+    document.getElementById('delete-status').textContent = '⏳ Mažu…';
+    try {
+      const res = await fetch('/memory/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ keyword })
+      });
+      const data = await safeJson(res);
+      document.getElementById('delete-status').textContent = res.ok ? data.message : '❌ ' + (data.error || res.status);
+    } catch (err) {
+      document.getElementById('delete-status').textContent = '❌ ' + err;
+    }
+  }
   window.doLogin = doLogin;
   window.copyToken = copyToken;
   window.authHeader = authHeader;
   window.toggleEnv = toggleEnv;
   window.safeJson = safeJson;
   window.uploadKnowledge = uploadKnowledge;
+  window.loadPending = loadPending;
+  window.approvePending = approvePending;
+  window.rejectPending = rejectPending;
+  window.deleteByTime = deleteByTime;
+  window.deleteByKeyword = deleteByKeyword;
 
   const modelSelect = document.getElementById('model-select');
   if (modelSelect) {
