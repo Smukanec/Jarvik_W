@@ -6,6 +6,7 @@ from flask import (
     after_this_request,
     g,
     url_for,
+    render_template,
 )
 from werkzeug.utils import secure_filename
 from memory import vymazat_memory_range
@@ -259,7 +260,7 @@ ANSWER_DIR = os.getenv("ANSWER_DIR", os.path.join(BASE_DIR, "answers"))
 
 # Jarvik keeps conversation history indefinitely.
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", template_folder="static")
 
 # Načti znalosti při startu
 KNOWLEDGE_DIR = os.getenv("KNOWLEDGE_DIR", os.path.join(BASE_DIR, "knowledge"))
@@ -1088,11 +1089,11 @@ def model_route():
 
 @app.route("/")
 def index():
-    return app.send_static_file("index.html")
+    return render_template("index.html")
 
 @app.route("/mobile")
 def mobile_index():
-    return app.send_static_file("mobile.html")
+    return render_template("mobile.html")
 
 @app.route("/static/<path:path>")
 def static_files(path):
