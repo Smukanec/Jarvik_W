@@ -8,9 +8,9 @@ to run a different model. Jarvik keeps the entire conversation history by
 default.
 The Flask API listens on port `8010` by default, but you can override this using
 the `FLASK_PORT` environment variable. The `FLASK_HOST` variable controls the
-address the server binds to and defaults to `127.0.0.1`. Setting
-`FLASK_HOST=0.0.0.0` (or `::`) allows access from Cloudflared or other
-machines. Set `OLLAMA_URL` to point at a remote Ollama instance if it is not
+address the server binds to and defaults to `0.0.0.0`. Set `FLASK_HOST=127.0.0.1`
+if you want to restrict connections to the local machine. Setting `FLASK_HOST` to
+`0.0.0.0` or `::` allows access from Cloudflared or other machines. Set `OLLAMA_URL` to point at a remote Ollama instance if it is not
 running locally (defaults to `http://localhost:11434`). When `OLLAMA_URL`
 targets another host the start scripts will not attempt to launch a local
 Ollama instance and all `ollama` commands automatically use the remote server.
@@ -450,8 +450,9 @@ bash start_jarvik.sh
 bash tunel.sh  # or cloudflared tunnel run Jarvik
 ```
 
-Jarvik listens on `127.0.0.1` by default. Set `FLASK_HOST=0.0.0.0` (or `::` for
-IPv6 access) when launching the server if Cloudflare needs to reach it.
+Jarvik now listens on `0.0.0.0` by default. Set `FLASK_HOST=127.0.0.1` if you
+want to restrict access to local connections only. Use `FLASK_HOST=0.0.0.0` (or
+`::` for IPv6) when Cloudflare needs to reach the server.
 
 ## DevLab mode
 
