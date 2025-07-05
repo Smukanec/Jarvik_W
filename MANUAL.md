@@ -202,3 +202,4 @@ Nejnovější verzi můžete stáhnout a nainstalovat skriptem `upgrade.sh`:
 bash upgrade.sh
 ```
 Skript stáhne nové soubory z repozitáře, provede odinstalování, znovu nainstaluje závislosti, obnoví aliasy v `~/.bashrc` a spustí Jarvika.
+Před aktualizací také zastaví běžící procesy Jarvika, aby nedošlo k uzamčení souborů.

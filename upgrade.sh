@@ -6,6 +6,12 @@ cd "$DIR" || exit
 GREEN='\033[1;32m'
 NC='\033[0m'
 
+# Stop running Jarvik components to avoid locked files
+if [ -f stop_all.sh ]; then
+  bash stop_all.sh
+fi
+rm -f final_prompt.txt flask.pid
+
 # Remove accidentally tracked files
 if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   changes=false
