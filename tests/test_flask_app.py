@@ -807,6 +807,17 @@ def test_knowledge_reject_moves_file(client, monkeypatch, tmp_path):
     assert meta["status"] == "rejected"
 
 
+def test_knowledge_invalid_path_rejected_and_approved(client):
+    """Invalid relative paths should return a 400 response."""
+    invalid = "../evil.txt"
+
+    res = client.post("/knowledge/approve", json={"file": invalid}, headers=_auth())
+    assert res.status_code == 400
+
+    res = client.post("/knowledge/reject", json={"file": invalid}, headers=_auth())
+    assert res.status_code == 400
+
+
 
 def test_mobile_page(client):
     res = client.get("/mobile")

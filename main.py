@@ -996,7 +996,7 @@ def _resolve_public_path(rel: str) -> str:
     rel = rel.lstrip("/\\")
     full = os.path.abspath(os.path.join(PUBLIC_KNOWLEDGE_FOLDER, rel))
     base = os.path.abspath(PUBLIC_KNOWLEDGE_FOLDER)
-    if not full.startswith(base):
+    if os.path.commonpath([full, base]) != base:
         raise ValueError("invalid path")
     return full
 
