@@ -439,6 +439,34 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('delete-status').textContent = '❌ ' + err;
     }
   }
+
+  function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('apikey');
+    const login = document.getElementById('login');
+    const iface = document.getElementById('interface');
+    if (login) login.style.display = 'block';
+    if (iface) iface.style.display = 'none';
+
+    const ids = ['message', 'response', 'debug', 'context', 'activity', 'status',
+      'duration', 'model-status', 'token-display'];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if ('value' in el) el.value = '';
+      else el.textContent = '';
+    });
+
+    const download = document.getElementById('download');
+    if (download) download.style.display = 'none';
+    const feedback = document.getElementById('feedback');
+    if (feedback) feedback.style.display = 'none';
+    const progress = document.getElementById('progress');
+    if (progress) progress.style.display = 'none';
+
+    const file = document.getElementById('file');
+    if (file) file.value = '';
+  }
   window.doLogin = doLogin;
   window.copyToken = copyToken;
   window.authHeader = authHeader;
@@ -450,6 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.rejectPending = rejectPending;
   window.deleteByTime = deleteByTime;
   window.deleteByKeyword = deleteByKeyword;
+  window.logout = logout;
 
   const modelSelect = document.getElementById('model-select');
   if (modelSelect) {
