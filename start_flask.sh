@@ -2,8 +2,21 @@
 
 echo "🚀 Spouštím Flask server Jarvik..."
 
+DIR="$(cd "$(dirname "$0")" && pwd)"
+PID_FILE="$DIR/flask.pid"
+
 # Kill any previous Flask instance
 echo "🛑 Zastavuji staré instance Flasku..."
+
+# Terminate Flask from stored PID if available
+if [ -f "$PID_FILE" ]; then
+  OLD_PID=$(cat "$PID_FILE")
+  if ps -p "$OLD_PID" > /dev/null 2>&1; then
+    kill "$OLD_PID" && echo "Killed old Flask with PID $OLD_PID" || true
+  fi
+  rm -f "$PID_FILE"
+fi
+
 is_windows() {
   case "$(uname -s)" in
     CYGWIN*|MINGW*|MSYS*) return 0 ;;
@@ -14,7 +27,7 @@ is_windows() {
 if is_windows && command -v powershell.exe >/dev/null 2>&1; then
   powershell.exe -Command "Get-Process python -ErrorAction SilentlyContinue | Where-Object { \$_.Path -like '*main.py' } | Stop-Process -Force"
 else
-  pkill -f 'python.*main.py' 2>/dev/null || true
+  pkill -f "python.*${DIR}/main.py" 2>/dev/null || true
 fi
 
 # Kontrola existence a aktivace venv
@@ -28,4 +41,7 @@ else
 fi
 
 # Spuštění Flasku
-python main.py
+python main.py &
+echo $! > "$PID_FILE"
+wait $!
+
