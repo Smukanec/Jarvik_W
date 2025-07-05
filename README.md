@@ -439,6 +439,19 @@ python -m tools.test_endpoint --log flask.log
 The script prints the HTTP response and, when `--log` is given, shows the last
 lines of the specified log file.
 
+## Remote access via Cloudflare
+
+Expose your running Jarvik instance over a Cloudflare Tunnel. Ensure the server
+is active first:
+
+```bash
+bash start_jarvik.sh
+bash tunel.sh  # or cloudflared tunnel run Jarvik
+```
+
+Jarvik listens on `127.0.0.1` by default. Set `FLASK_HOST=0.0.0.0` (or `::` for
+IPv6 access) when launching the server if Cloudflare needs to reach it.
+
 ## DevLab mode
 
 When a `devlab_config.json` file with a `url` field exists in the repository
