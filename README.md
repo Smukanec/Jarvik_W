@@ -449,6 +449,9 @@ bash start_jarvik.sh
 bash tunel.sh  # or cloudflared tunnel run Jarvik
 ```
 
+`tunel.sh` verifies that the server responds on `$FLASK_PORT` (default `8010`) and
+exits with a warning if not.
+
 Jarvik listens on `127.0.0.1` by default. Set `FLASK_HOST=0.0.0.0` (or `::` for
 IPv6 access) when launching the server if Cloudflare needs to reach it.
 
