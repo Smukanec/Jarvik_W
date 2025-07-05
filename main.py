@@ -107,6 +107,7 @@ def call_api(prompt: str, key: str | None = None) -> str:
         API_URL,
         headers=headers,
         json={"model": API_MODEL, "messages": [{"role": "user", "content": prompt}]},
+        timeout=10,
     )
     resp.raise_for_status()
     data = resp.json()
@@ -565,6 +566,7 @@ def ask():
             response = requests.post(
                 f"{OLLAMA_URL}/api/generate",
                 json={"model": MODEL_NAME, "prompt": prompt, "stream": False},
+                timeout=10,
             )
             response.raise_for_status()
             result = response.json()
@@ -627,6 +629,7 @@ def ask_web():
             response = requests.post(
                 f"{OLLAMA_URL}/api/generate",
                 json={"model": MODEL_NAME, "prompt": prompt, "stream": False},
+                timeout=10,
             )
             response.raise_for_status()
             result = response.json()
@@ -710,6 +713,7 @@ def ask_file():
             response = requests.post(
                 f"{OLLAMA_URL}/api/generate",
                 json={"model": MODEL_NAME, "prompt": prompt, "stream": False},
+                timeout=10,
             )
             response.raise_for_status()
             result = response.json()
