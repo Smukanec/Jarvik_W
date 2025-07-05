@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Jarvik{% endblock %}</title>
+  <style>
+    body {
+      font-family: monospace;
+      background-color: #121212;
+      margin: 2em;
+      color: #c8f6c8;
+    }
+    img {
+      max-height: 100px;
+      margin-bottom: 1em;
+    }
+    textarea {
+      width: 100%;
+      padding: 1em;
+      font-size: 1em;
+      border: 2px solid #00ff00;
+      border-radius: 8px;
+      background-color: #1e1e1e;
+      color: #c8f6c8;
+    }
+    button {
+      background-color: #00aa00;
+      color: white;
+      border: none;
+      padding: 0.8em 1.5em;
+      font-size: 1em;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 0.5em;
+    }
+    button:hover {
+      background-color: #007700;
+    }
+    pre {
+      background-color: #1e1e1e;
+      border: 1px solid #2e7d32;
+      padding: 1em;
+      border-radius: 8px;
+      margin-top: 1em;
+      color: #c8f6c8;
+      white-space: pre-wrap;
+      word-break: break-word;
+      text-align: left;
+    }
+    #panels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1em;
+    }
+    .panel {
+      flex: 1 1 30%;
+      min-width: 250px;
+    }
+    #response-panel {
+      flex: 1 1 70%;
+    }
+    #response {
+      min-height: 300px;
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: bold;
+      color: #00ff00;
+      margin-top: 1em;
+    }
+    #log, #status, #debug, #activity, #progress {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    #current-model-display {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-bottom: 0.5em;
+    }
+    #env-switch {
+      margin: 0.5em 0;
+    }
+    #feedback button {
+      margin-right: 0.5em;
+    }
+    #correction {
+      margin-top: 0.5em;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-family: sans-serif;
+        margin: 0;
+        padding: 1em;
+      }
+      input, select, textarea, button {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0.5em 0;
+        padding: 0.5em;
+        border-radius: 4px;
+        font-size: 1em;
+      }
+      textarea, input, select {
+        background-color: #1e1e1e;
+        color: #c8f6c8;
+        border: 1px solid #00aa00;
+      }
+      button {
+        background-color: #00aa00;
+        color: white;
+        border: none;
+      }
+      pre {
+        border-radius: 4px;
+      }
+      #panels {
+        flex-direction: column;
+      }
+      .panel, #response-panel {
+        flex: none;
+        width: 100%;
+      }
+      #response {
+        min-height: initial;
+      }
+      #model-desc, #env-switch, #token-display,
+      #copy-token-btn, #save-txt, #memory-private,
+      #topic-checkboxes, #activity, #debug,
+      #knowledge-file, #knowledge-private,
+      #knowledge-topic, #knowledge-desc,
+      #knowledge-status, img {
+        display: none;
+      }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <img src="/static/alternativ.png" alt="Jarvik logo">
+  <div id="login" style="display:none">
+    <input id="nick" placeholder="nick"><br>
+    <input id="password" type="password" placeholder="password"><br>
+    <input id="apikey" placeholder="API key (optional)"><br>
+    <button onclick="doLogin()">Login</button>
+    <pre id="login-status"></pre>
+  </div>
+
+  <div id="interface" style="display:none">
+    <h2 id="current-model-display">Running model: <span id="current-model">?</span></h2>
+    <select id="model-select">
+      <option value="openchat" title="Chytrý AI asistent. Vhodný pro běžné otázky, dialog a porozumění pokynům.">OpenChat – chytrý AI asistent 🌐</option>
+      <option value="llama3:8b" title="Vysoká přesnost, vhodný pro složitější dotazy, rozumí webovému obsahu i dokumentům.">LLaMA 3 8B – velký jazykový model 🌐</option>
+      <option value="nous-hermes2" title="Dobře zvládá otázky, formální texty i instrukce, vhodný i pro složitější dotazy s doplněním z internetu.">Nous Hermes 2 – jemně doladěný Mistral 🌐</option>
+      <option value="command-r" title="Optimalizovaný pro programování, Python, shell, kódové úkoly.">Command R – model pro RAG 🌐</option>
+      <option value="api" title="Externí API – dotazy jsou posílány do API.">Externí API</option>
+    </select>
+    <button onclick="switchModel()">Switch model</button>
+    <p id="model-desc"></p>
+    <pre id="model-status"></pre>
+
+    <div id="env-switch">
+      Environment: <span id="env-info">local</span>
+      <button id="env-toggle" onclick="toggleEnv()" style="display:none">Use DevLab</button>
+    </div>
+
+    <pre id="token-display"></pre>
+    <button id="copy-token-btn" onclick="copyToken()">Copy token</button>
+    <button onclick="logout()">Logout</button>
+
+    <p id="intro">Napiš dotaz nebo přilož soubor a klikni na <strong>Odeslat</strong>.</p>
+
+    <textarea id="message" rows="4" placeholder="Zadej dotaz…"></textarea><br>
+    <input type="file" id="file"><br>
+    <label><input type="checkbox" id="save-txt"> Uložit odpověď do txt</label><br>
+    <label><input type="checkbox" id="memory-private"> Soukromá</label><br>
+    <div id="topic-checkboxes"></div>
+    <button onclick="ask()">Odeslat</button>
+    <pre id="activity"></pre>
+    <div id="progress" style="display:none">⏳ Čekejte…</div>
+
+    <div id="panels">
+      <div class="panel" id="response-panel">
+        <h3>🤖 Odpověď</h3>
+        <pre id="response"></pre>
+        <a id="download" style="display:none" href="#">⬇️ Stáhnout odpověď</a>
+        <div id="feedback" style="display:none">
+          <button onclick="sendFeedback('good')">👍</button>
+          <button onclick="sendFeedback('bad')">👎</button>
+          <button onclick="showCorrection()">✏️ Opravit</button>
+          <div id="correction" style="display:none">
+            <textarea id="correction-text" rows="3" placeholder="Navržená odpověď…"></textarea>
+            <button onclick="submitCorrection()">Odeslat</button>
+          </div>
+          <pre id="feedback-status"></pre>
+        </div>
+      </div>
+      {% block extra_panels %}{% endblock %}
+    </div>
+
+    {% block extra_interface %}{% endblock %}
+  </div>
+
+  {% block extra_body %}{% endblock %}
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
