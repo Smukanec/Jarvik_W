@@ -397,6 +397,19 @@ logging in.
 A mobile-friendly version is available at `/mobile`. Open this URL on your
 phone or tablet for a simplified interface.
 
+## Web Interface Overview
+
+After logging in you will see the main dashboard with several panels and controls.
+
+1. **Model selection** – choose one of the available models from the drop-down list and click *Switch model*. The current model name and short description are displayed above the selector.
+2. **Environment toggle** – when `devlab_config.json` is present the **Use DevLab** button switches requests between the local server and the configured remote URL.
+3. **Asking a question** – enter a prompt in the text field and optionally attach a file. Check **Save to txt** if you want the answer saved to a text file. Use **Private** to store the exchange only in your personal log. Topics can be selected via checkboxes to help organise questions.
+4. **Progress indicator** – while the request is processed the status "⏳ Čekejte…" appears.
+5. **Answer panel** – the right panel shows the model response. Below it are buttons to mark the reply as good or bad and to send a correction. If saving is enabled a download link to the text file is displayed.
+6. **Additional panels** – context snippets and debug information are shown on the left. You can also expand the *Historie* section to view recent conversation history and inspect status messages.
+7. **Knowledge management** – further controls allow uploading new knowledge files, approving or rejecting pending uploads and deleting memory entries by time range or keyword.
+8. **Logout** – use the *Logout* button at the bottom to remove the token and return to the login form.
+
 ## Running Tests
 
 Unit tests live in the `tests/` directory. Install the development
