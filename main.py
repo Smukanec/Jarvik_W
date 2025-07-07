@@ -163,6 +163,7 @@ _app_handler = RotatingFileHandler(
     maxBytes=MAX_LOG_BYTES,
     backupCount=LOG_BACKUPS,
     encoding="utf-8",
+    errors="replace",
 )
 _app_handler.setFormatter(
     logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
@@ -187,6 +188,7 @@ _prompt_handler = RotatingFileHandler(
     maxBytes=MAX_PROMPT_LOG_BYTES,
     backupCount=PROMPT_LOG_BACKUPS,
     encoding="utf-8",
+    errors="replace",
 )
 _prompt_handler.setFormatter(logging.Formatter("%(asctime)s\n%(message)s"))
 _prompt_logger.addHandler(_prompt_handler)
