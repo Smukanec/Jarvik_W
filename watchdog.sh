@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FLASK_PORT=${FLASK_PORT:-8010}
+FLASK_PORT=${FLASK_PORT:-8000}
 MODEL_NAME=${MODEL_NAME:-"openchat"}
 MODEL_LOG="${MODEL_NAME//:/_}.log"
 

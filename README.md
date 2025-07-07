@@ -6,7 +6,7 @@ models at any time via the web interface or by calling the `/model` endpoint.
 Alternatively set the `MODEL_NAME` environment variable when starting a script
 to run a different model. Jarvik keeps the entire conversation history by
 default.
-The Flask API listens on port `8010` by default, but you can override this using
+The Flask API listens on port `8000` by default, but you can override this using
 the `FLASK_PORT` environment variable. The `FLASK_HOST` variable controls the
 address the server binds to and defaults to `0.0.0.0`. Set `FLASK_HOST=127.0.0.1`
 if you want to restrict connections to the local machine. Setting `FLASK_HOST` to
@@ -321,7 +321,7 @@ so any uncommitted changes will be lost.
 ## API Usage
 
 Jarvik exposes a few HTTP endpoints on the configured Flask port
-(default `8010`) that can be consumed by external applications such as ChatGPT:
+(default `8000`) that can be consumed by external applications such as ChatGPT:
 
 * `POST /ask` – ask Jarvik a question. The conversation is stored in memory.
 * `POST /memory/add` – manually append a `{ "user": "...", "jarvik": "..." }`
@@ -436,13 +436,13 @@ helper reads the target URL from the `JARVIK_URL` environment variable or from a
 `devlab_config.json` file containing a `url` field.
 
 ```bash
-JARVIK_URL=http://example.com:8010 python -m tools.test_endpoint -m "ping"
+JARVIK_URL=http://example.com:8000 python -m tools.test_endpoint -m "ping"
 ```
 
 Example `devlab_config.json`:
 
 ```json
-{ "url": "http://example.com:8010" }
+{ "url": "http://example.com:8000" }
 ```
 
 With this file present you can simply run:

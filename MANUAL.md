@@ -3,7 +3,7 @@
 Tento krátký manuál popisuje základní kroky pro instalaci a spuštění Jarvika na lokálním stroji.
 
 Ve výchozím nastavení je použit model `openchat`. Model lze kdykoli změnit ve webovém rozhraní nebo voláním endpointu `/model`. V příkladech je předpokládán OpenChat, jiný model zvolíte nastavením proměnné `MODEL_NAME` při spouštění skriptů.
-Flask API naslouchá na portu `8010`, který lze změnit proměnnou `FLASK_PORT`.
+Flask API naslouchá na portu `8000`, který lze změnit proměnnou `FLASK_PORT`.
 Pro vzdálenou Ollamu nastavte proměnnou `OLLAMA_URL` (výchozí
 `http://localhost:11434`).
 Citlivost vyhledávání ve znalostech můžete upravit proměnnou `RAG_THRESHOLD`
@@ -45,7 +45,7 @@ bash start_openchat.sh
 jarvik-start
 ```
 Skript aktivuje virtuální prostředí, spustí Ollamu, zvolený model (výchozí
-OpenChat) a nakonec Flask server na portu 8010 (lze změnit proměnnou
+OpenChat) a nakonec Flask server na portu 8000 (lze změnit proměnnou
 `FLASK_PORT`). Pokud model chybí, stáhne se automaticky. Pro jiný model
 nastavte proměnnou `MODEL_NAME` při spuštění – všechny dodané skripty ji nyní
 plně respektují. Například:

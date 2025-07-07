@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FLASK_PORT=${FLASK_PORT:-8010}
+FLASK_PORT=${FLASK_PORT:-8000}
 
 command_exists() {
   command -v "$1" >/dev/null 2>&1
@@ -22,7 +22,7 @@ else
 fi
 
 # Allow overriding the Flask port
-FLASK_PORT=${FLASK_PORT:-8010}
+FLASK_PORT=${FLASK_PORT:-8000}
 
 # Check that the Jarvik server is responding on the given port
 CHECK_OK=0
