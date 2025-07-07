@@ -1,8 +1,18 @@
 import os
 import json
+import logging
 from dataclasses import dataclass, field
 from typing import Dict
-from werkzeug.security import check_password_hash, generate_password_hash
+try:
+    from werkzeug.security import check_password_hash, generate_password_hash
+except Exception:  # pragma: no cover - optional dependency
+    import hashlib
+
+    def generate_password_hash(password: str) -> str:
+        return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+    def check_password_hash(hashval: str, password: str) -> bool:
+        return hashlib.sha256(password.encode("utf-8")).hexdigest() == hashval
 
 @dataclass
 class User:
@@ -19,8 +29,15 @@ def load_users(path: str) -> Dict[str, User]:
     """Load user definitions from *path* if it exists."""
     if not os.path.exists(path):
         return {}
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as exc:  # pragma: no cover - invalid file
+        logging.error("Failed to load users file %s: %s", path, exc)
+        return {}
+    if not isinstance(data, list):
+        logging.error("Users file %s has unexpected format", path)
+        return {}
     users: Dict[str, User] = {}
     for item in data:
         if not item.get("nick") or not item.get("password_hash"):
