@@ -125,8 +125,8 @@ bash start_command_r.sh
 # Nous Hermes 2 model
 bash start_nous_hermes2.sh
 
-# External API
-MODEL_NAME=api bash start_jarvik.sh
+# External API mode
+MODEL_MODE=api bash start_jarvik.sh
 ```
 
 Switching models is seamless because each wrapper calls `switch_model.sh` to
@@ -135,8 +135,9 @@ replaced automatically.
 
 ## Supported Models
 
-Jarvik supports a handful of local models plus an optional external API. Pull
-them with `ollama pull` before first use:
+Jarvik supports a handful of local models plus an optional external API. Start
+with `MODEL_MODE=api` to route requests through the remote service. Pull
+the local models with `ollama pull` before first use:
 
 ```
 ollama pull openchat
