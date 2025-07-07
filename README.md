@@ -34,6 +34,9 @@ pip install -U duckduckgo-search>=8.0
 Make sure the commands `ollama`, `curl`, `lsof` and either `ss` (from
 `iproute2`) or `nc` (from `netcat`) are available on your system.
 On Windows you can install the Windows Subsystem for Linux or download BusyBox for Windows (https://frippery.org/busybox/) to provide these commands. Place `busybox.exe` somewhere in your `PATH` and call `busybox nc` or `busybox ss` when needed.
+The start scripts also try to use `pgrep`/`pkill` from the `procps` package to
+detect or stop running processes. When these commands are missing the scripts
+fall back to `tasklist` on Windows or `ps` and `grep` on Unix systems.
 
 If you need a fresh start, run the installer with `--clean` to first remove
 any previous environment:

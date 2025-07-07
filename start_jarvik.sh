@@ -45,6 +45,26 @@ for cmd in $CMDS; do
   fi
 done
 
+# Helper to detect Windows
+is_windows() {
+  case "$(uname -s)" in
+    CYGWIN*|MINGW*|MSYS*) return 0 ;;
+  esac
+  [ "$OS" = "Windows_NT" ]
+}
+
+# Cross platform check if a process is running
+process_running() {
+  local pattern="$1"
+  if command -v pgrep >/dev/null 2>&1; then
+    pgrep -f "$pattern" >/dev/null 2>&1
+  elif is_windows && command -v tasklist >/dev/null 2>&1; then
+    tasklist | grep -i "$pattern" >/dev/null 2>&1
+  else
+    ps aux | grep "$pattern" | grep -v grep >/dev/null 2>&1
+  fi
+}
+
 # Potřebujeme také 'ss' nebo 'nc' (případně BusyBox) pro kontrolu běžících portů
 SS_CMD=""
 NC_CMD=""
@@ -75,7 +95,7 @@ if [ "$MODEL_MODE" != "api" ]; then
 
   # Spustit Ollama na lokální stanici, pokud neběží
   if [ "$REMOTE_OLLAMA" -eq 0 ]; then
-    if ! pgrep -f "ollama serve" > /dev/null; then
+    if ! process_running "ollama serve"; then
       echo -e "${GREEN}🚀 Spouštím Ollama...${NC}"
       nohup ollama serve > ollama.log 2>&1 &
     fi
@@ -125,11 +145,11 @@ if [ "$MODEL_MODE" != "api" ]; then
   fi
 
   # Spustit $MODEL_NAME, pokud neběží
-  if ! pgrep -f -x "ollama run $MODEL_NAME" > /dev/null; then
+  if ! process_running "ollama run $MODEL_NAME"; then
     echo -e "${GREEN}🧠 Spouštím model $MODEL_NAME...${NC}"
     nohup ollama run "$MODEL_NAME" > "$MODEL_LOG" 2>&1 &
     sleep 2
-    if ! pgrep -f -x "ollama run $MODEL_NAME" > /dev/null; then
+    if ! process_running "ollama run $MODEL_NAME"; then
       echo -e "${RED}❌ Model $MODEL_NAME se nespustil, zkontrolujte $MODEL_LOG${NC}"
       exit 1
     fi
