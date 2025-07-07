@@ -30,7 +30,7 @@ def get_target_url() -> str:
                 return str(data["url"]).rstrip("/")
         except Exception:
             pass
-    return "http://localhost:8010"
+    return "http://localhost:8000"
 
 
 def send_test_request(url: str, message: str) -> str:

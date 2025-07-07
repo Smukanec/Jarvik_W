@@ -4,7 +4,7 @@ RED="\033[1;31m"
 NC="\033[0m"
 
 # Allow overriding the Flask port
-FLASK_PORT=${FLASK_PORT:-8010}
+FLASK_PORT=${FLASK_PORT:-8000}
 
 cd "$(dirname "$0")" || exit
 

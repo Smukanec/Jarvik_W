@@ -34,7 +34,7 @@ from typing import Any
 # Allow custom model via environment variable
 MODEL_NAME = os.getenv("MODEL_NAME", "openchat")
 # Allow choosing the Flask port via environment variable
-FLASK_PORT = int(os.getenv("FLASK_PORT", 8010))
+FLASK_PORT = int(os.getenv("FLASK_PORT", 8000))
 # Allow choosing the Flask host via environment variable
 FLASK_HOST = os.getenv("FLASK_HOST", "0.0.0.0")
 # Base URL for the Ollama server
