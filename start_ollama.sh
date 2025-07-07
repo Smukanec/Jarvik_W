@@ -11,6 +11,26 @@ if ! command -v ollama >/dev/null 2>&1; then
   exit 1
 fi
 
+# Helper to detect Windows
+is_windows() {
+  case "$(uname -s)" in
+    CYGWIN*|MINGW*|MSYS*) return 0 ;;
+  esac
+  [ "$OS" = "Windows_NT" ]
+}
+
+# Cross platform check if a process is running
+process_running() {
+  local pattern="$1"
+  if command -v pgrep >/dev/null 2>&1; then
+    pgrep -f "$pattern" >/dev/null 2>&1
+  elif is_windows && command -v tasklist >/dev/null 2>&1; then
+    tasklist | grep -i "$pattern" >/dev/null 2>&1
+  else
+    ps aux | grep "$pattern" | grep -v grep >/dev/null 2>&1
+  fi
+}
+
 # Rozpoznat vzdálenou Ollamu
 OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
 if [[ $OLLAMA_URL == http://localhost* ]] || [[ $OLLAMA_URL == http://127.* ]] || [[ $OLLAMA_URL == https://localhost* ]]; then
@@ -22,7 +42,7 @@ fi
 
 # Start Ollama pouze lokálně
 if [ "$REMOTE_OLLAMA" -eq 0 ]; then
-  if ! pgrep -f "ollama serve" > /dev/null; then
+  if ! process_running "ollama serve"; then
     echo -e "${GREEN}🚀 Spouštím Ollama...${NC}"
     nohup ollama serve > ollama.log 2>&1 &
   else
