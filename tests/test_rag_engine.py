@@ -3,6 +3,7 @@ import sys
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+import rag_engine
 from rag_engine import KnowledgeBase, load_knowledge, search_knowledge
 
 
@@ -24,10 +25,7 @@ def test_search_knowledge_word_match():
         "Completely unrelated",
     ]
     result = search_knowledge("hello world", chunks, threshold=0.9)
-    assert result == [
-        "Another world piece",
-        "This is a hello text",
-    ]
+    assert result == ["Another world piece"]
 
 
 def test_search_knowledge_sequence_ratio():
@@ -38,7 +36,7 @@ def test_search_knowledge_sequence_ratio():
 
 def test_search_knowledge_punctuation_removed():
     chunks = ["hello world", "foo bar"]
-    result = search_knowledge("Hello, world!", chunks, threshold=1.1)
+    result = search_knowledge("Hello, world!", chunks, threshold=0.9)
     assert result == ["hello world"]
 
 
@@ -137,3 +135,59 @@ def test_knowledge_base_topics(tmp_path):
 
     kb.reload(["t2"])
     assert kb.search("beta") == ["beta"]
+
+
+def test_search_knowledge_threshold_fallback(monkeypatch):
+    """search_knowledge should honour the provided threshold in fallback mode."""
+    chunks = ["hello"]
+    # Environment sets a very high threshold which would normally filter out
+    # the result.
+    monkeypatch.setenv("RAG_THRESHOLD", "1.0")
+    result = search_knowledge("helo", chunks, threshold=0.8)
+    assert result == ["hello"]
+
+
+def test_search_knowledge_threshold_vector(monkeypatch):
+    """search_knowledge should honour threshold in vector mode."""
+
+    class DummyArray(list):
+        def astype(self, _):
+            return self
+
+        @property
+        def shape(self):
+            return (len(self), len(self[0]))
+
+    class DummyModel:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def encode(self, data, **_kwargs):
+            if len(data) == 1:
+                return DummyArray([[0.6]])
+            return DummyArray([[0.5], [0.1]])
+
+    class DummyIndex:
+        def __init__(self, _dim):
+            pass
+
+        def add(self, _arr):
+            pass
+
+        def search(self, _q, _top_k):
+            return [[0.3, 0.06]], [[0, 1]]
+
+    monkeypatch.setattr(rag_engine, "VECTOR_SUPPORT", True)
+    monkeypatch.setattr(rag_engine, "SentenceTransformer", DummyModel, raising=False)
+    monkeypatch.setattr(
+        rag_engine,
+        "faiss",
+        type("faiss", (), {"IndexFlatIP": DummyIndex}),
+        raising=False,
+    )
+
+    chunks = ["a", "b"]
+    # High env threshold shouldn't matter because we pass a lower threshold
+    monkeypatch.setenv("RAG_THRESHOLD", "1.0")
+    result = search_knowledge("x", chunks, threshold=0.2)
+    assert result == ["a"]

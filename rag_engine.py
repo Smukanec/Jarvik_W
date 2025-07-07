@@ -207,9 +207,21 @@ def _get_default_kb() -> KnowledgeBase:
     return _default_kb
 
 
-def search_knowledge(query: str, knowledge_chunks: List[str], threshold: float = 0.7) -> List[str]:
+def search_knowledge(
+    query: str, knowledge_chunks: List[str], threshold: float | None = None
+) -> List[str]:
     """Search a list of paragraphs without creating a persistent instance."""
+
+    def _env_threshold() -> float:
+        env = os.getenv("RAG_THRESHOLD")
+        try:
+            return float(env) if env is not None else 0.7
+        except ValueError:  # pragma: no cover - environment may be invalid
+            return 0.7
+
     if VECTOR_SUPPORT:
+        if threshold is None:
+            threshold = _env_threshold()
         model = SentenceTransformer(
             os.getenv("RAG_MODEL", "paraphrase-multilingual-MiniLM-L12-v2")
         )
@@ -230,14 +242,11 @@ def search_knowledge(query: str, knowledge_chunks: List[str], threshold: float =
                 results.append(knowledge_chunks[i])
         return results
 
-    # Fallback string matching ignoring the threshold argument
-    env = os.getenv("RAG_THRESHOLD")
-    try:
-        thr = float(env) if env is not None else 0.7
-    except ValueError:  # pragma: no cover - environment may be invalid
-        thr = 0.7
+    # Fallback string matching honoring the threshold argument
+    if threshold is None:
+        threshold = _env_threshold()
     scored = [(_similarity(query, c), c) for c in knowledge_chunks]
-    scored = [c for c in scored if c[0] >= thr]
+    scored = [c for c in scored if c[0] >= threshold]
     scored.sort(key=lambda x: x[0], reverse=True)
     return [c[1] for c in scored]
 
