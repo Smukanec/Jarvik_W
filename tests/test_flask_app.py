@@ -169,9 +169,9 @@ def test_memory_search_with_invalid_line(client):
     import os
     import json
 
-    from datetime import datetime
+    from datetime import datetime, UTC
     path = os.path.join(main.MEMORY_DIR, "public.jsonl")
-    ts = datetime.utcnow().isoformat()
+    ts = datetime.now(UTC).isoformat()
     with open(path, "w", encoding="utf-8") as f:
         f.write(json.dumps({"timestamp": ts, "role": "user", "message": "ok"}) + "\n")
         f.write(json.dumps({"timestamp": ts, "role": "assistant", "message": "good"}) + "\n")
@@ -725,11 +725,11 @@ def test_read_memory_file_new_format(monkeypatch, tmp_path):
     import main
     import os
     import json
-    from datetime import datetime
+    from datetime import datetime, UTC
 
     monkeypatch.setattr(main, "MEMORY_DIR", str(tmp_path))
     path = os.path.join(main.MEMORY_DIR, "public.jsonl")
-    ts = datetime.utcnow().isoformat()
+    ts = datetime.now(UTC).isoformat()
     with open(path, "w", encoding="utf-8") as f:
         f.write(json.dumps({"timestamp": ts, "role": "user", "message": "q"}) + "\n")
         f.write(json.dumps({"timestamp": ts, "role": "assistant", "message": "a"}) + "\n")
