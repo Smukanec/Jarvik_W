@@ -3,9 +3,19 @@
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR" || exit
 
-# Terminate Ollama server
-pkill -f "ollama serve" 2>/dev/null && echo "Stopped ollama serve" || true
-# Terminate any running models
-pkill -f "ollama run" 2>/dev/null && echo "Stopped running models" || true
-# Terminate Flask application
-pkill -f "python3 main.py" 2>/dev/null && echo "Stopped Flask" || true
+is_windows() {
+  case "$(uname -s)" in
+    CYGWIN*|MINGW*|MSYS*) return 0 ;;
+  esac
+  [ "$OS" = "Windows_NT" ]
+}
+
+if is_windows && command -v powershell.exe >/dev/null 2>&1; then
+  powershell.exe -Command '$p=Get-Process -Name ollama -ErrorAction SilentlyContinue; if ($p) { $p | Stop-Process -Force; exit 0 } else { exit 1 }' && echo "Stopped ollama serve" || true
+  powershell.exe -Command '$p=Get-Process -Name ollama -ErrorAction SilentlyContinue; if ($p) { $p | Stop-Process -Force; exit 0 } else { exit 1 }' && echo "Stopped running models" || true
+  powershell.exe -Command '$p=Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*main.py" }; if ($p) { $p | Stop-Process -Force; exit 0 } else { exit 1 }' && echo "Stopped Flask" || true
+else
+  pkill -f "ollama serve" 2>/dev/null && echo "Stopped ollama serve" || true
+  pkill -f "ollama run" 2>/dev/null && echo "Stopped running models" || true
+  pkill -f "python.*main.py" 2>/dev/null && echo "Stopped Flask" || true
+fi
