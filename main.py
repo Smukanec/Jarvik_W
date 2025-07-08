@@ -28,7 +28,7 @@ from filelock import FileLock
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 
 # Allow custom model via environment variable
@@ -319,7 +319,7 @@ def _read_memory_file(folder: str) -> list[dict]:
 
         cutoff = None
         if MEMORY_RETENTION_DAYS > 0:
-            cutoff = datetime.utcnow() - timedelta(days=MEMORY_RETENTION_DAYS)
+            cutoff = datetime.now(UTC) - timedelta(days=MEMORY_RETENTION_DAYS)
         pending_user: str | None = None
         for line in lines:
             line = line.strip()
@@ -405,7 +405,7 @@ def append_to_memory(
 ) -> None:
     """Append a conversation entry to the memory log."""
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     now_date = date or now.date().isoformat()
     now_time = time or now.time().isoformat(timespec="seconds")
     now_iso = f"{now_date}T{now_time}"
@@ -447,7 +447,7 @@ def append_to_memory(
             f.write(json.dumps(entry_user) + "\n")
             f.write(json.dumps(entry_assist) + "\n")
         if MEMORY_RETENTION_DAYS > 0:
-            cutoff = (datetime.utcnow() - timedelta(days=MEMORY_RETENTION_DAYS)).isoformat()
+            cutoff = (datetime.now(UTC) - timedelta(days=MEMORY_RETENTION_DAYS)).isoformat()
             if vymazat_memory_range(path, do=cutoff):
                 memory_caches[folder] = _read_memory_file(folder)
 
@@ -465,7 +465,7 @@ def _flush_memory_locked(folder: str) -> None:
     lines = cache
     with open(path, "w", encoding="utf-8") as f:
         for item in lines:
-            now = datetime.utcnow()
+            now = datetime.now(UTC)
             now_date = now.date().isoformat()
             now_time = now.time().isoformat(timespec="seconds")
             now_iso = f"{now_date}T{now_time}"
