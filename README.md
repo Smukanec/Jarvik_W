@@ -335,9 +335,9 @@ The script pulls the newest repository files, performs an uninstall, installs th
 It also stops any running Jarvik processes before updating to avoid locked files.
 Note that the upgrade process forcefully resets the repository to the remote branch,
 so any uncommitted changes will be lost. The `users.json` file is excluded from
-cleaning, preserving your configured accounts automatically. Files in the
-`knowledge/` directory are also kept so your articles remain available after
-upgrading.
+cleaning, preserving your configured accounts automatically. The upgrade script
+uses `git clean -fd -e knowledge` so the `knowledge/` directory is kept and your
+articles remain available after upgrading.
 
 ## API Usage
 
