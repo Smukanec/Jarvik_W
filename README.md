@@ -4,8 +4,9 @@ This repository contains scripts to run the Jarvik assistant locally. OpenChat
 is the default model used by all helper scripts. You can switch
 models at any time via the web interface or by calling the `/model` endpoint.
 Alternatively set the `MODEL_NAME` environment variable when starting a script
-to run a different model. Jarvik keeps the entire conversation history by
-default.
+to run a different model. Jarvik keeps conversation history for seven days by
+default. Set the `MEMORY_RETENTION_DAYS` environment variable to adjust the
+retention period.
 The Flask API listens on port `8000` by default, but you can override this using
 the `FLASK_PORT` environment variable. The `FLASK_HOST` variable controls the
 address the server binds to and defaults to `0.0.0.0`. Set `FLASK_HOST=127.0.0.1`
@@ -68,12 +69,14 @@ needed.
 Files uploaded via `/knowledge/upload` are automatically converted to text. Provide a `description` to store a short summary in memory.
 ### Folder layout and per-user data
 
-Conversation history is stored in `memory/`. The public log lives in
-`memory/public.jsonl` while authenticated users get their own
-`memory/<nick>/log.jsonl` file. Knowledge files reside in `knowledge/` and any
-`knowledge/<nick>` subfolders listed in `users.json` are loaded for that user in
-addition to the public files. Set the `MEMORY_DIR` or `KNOWLEDGE_DIR`
-environment variables to override these default locations.
+Conversation history is stored in `memory/` and retained for seven days by
+default. The public log lives in `memory/public.jsonl` while authenticated users
+get their own `memory/<nick>/log.jsonl` file. Set the
+`MEMORY_RETENTION_DAYS` environment variable to change how long entries are
+kept. Knowledge files reside in `knowledge/` and any `knowledge/<nick>`
+subfolders listed in `users.json` are loaded for that user in addition to the
+public files. Set the `MEMORY_DIR` or `KNOWLEDGE_DIR` environment variables to
+override these default locations.
 
 The similarity threshold for vector search defaults to `0.7`. You can tweak how
 strictly queries match the knowledge base by setting the `RAG_THRESHOLD`
