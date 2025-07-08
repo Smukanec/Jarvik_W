@@ -137,6 +137,11 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body>
+  <script>
+    if (location.pathname === '/' && window.innerWidth <= 600) {
+      location.replace('/mobile');
+    }
+  </script>
   <img src="/static/alternativ.png" alt="Jarvik logo">
   <div id="login" style="display:none">
     <input id="nick" placeholder="nick"><br>
