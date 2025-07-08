@@ -57,6 +57,18 @@ This will append alias commands such as `jarvik-start`, `jarvik-status`,
 available models to your `~/.bashrc` and reload the file. The `jarvik-start`
 alias launches the default OpenChat model.
 
+### Cleaning the knowledge base
+
+If you need to wipe existing articles and start fresh, run:
+
+```bash
+bash clean_knowledge.sh
+```
+
+This removes all files and folders under `knowledge/` except for `_index.json`.
+The script waits briefly so you can cancel with Ctrl+C before deletion.
+
+
 Knowledge files are loaded from the `knowledge/` folder at startup. Jarvik now
 loads only plain text (`.txt`) files by default. See `knowledge/sample.txt` for a minimal example of the expected structure. The `knowledge/` directory now contains topic-specific folders such as `technologie/`, `programovani/` or `historie/`. A new `_index.json` file lists these categories with short descriptions so the UI can present them to users. The `KnowledgeBase` class from
 `rag_engine.py` reads these files, splits them into paragraphs and indexes them
