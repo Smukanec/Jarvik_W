@@ -575,7 +575,7 @@ def ask():
             output = result.get("response", "").strip()
     except Exception as e:
         debug_log.append(str(e))
-        return jsonify({"error": "❌ Chyba při komunikaci s Ollamou", "debug": debug_log}), 500
+        return jsonify({"error": f"❌ Chyba při komunikaci s Ollamou: {e}", "debug": debug_log}), 500
 
     private = str(data.get("private", "true")).lower() in {"1", "true", "yes"}
     target_folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
@@ -638,7 +638,7 @@ def ask_web():
             output = result.get("response", "").strip()
     except Exception as e:
         debug_log.append(str(e))
-        return jsonify({"error": "❌ Chyba při komunikaci s Ollamou", "debug": debug_log}), 500
+        return jsonify({"error": f"❌ Chyba při komunikaci s Ollamou: {e}", "debug": debug_log}), 500
 
     private = str(data.get("private", "true")).lower() in {"1", "true", "yes"}
     target_folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
@@ -723,7 +723,7 @@ def ask_file():
     except Exception as e:
         debug_log.append(str(e))
         return (
-            jsonify({"error": "❌ Chyba při komunikaci s Ollamou", "debug": debug_log}),
+            jsonify({"error": f"❌ Chyba při komunikaci s Ollamou: {e}", "debug": debug_log}),
             500,
         )
 
