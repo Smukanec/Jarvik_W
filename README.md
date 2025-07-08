@@ -319,7 +319,8 @@ bash upgrade.sh
 The script pulls the newest repository files, performs an uninstall, installs the dependencies again, reloads the shell aliases and starts all components.
 It also stops any running Jarvik processes before updating to avoid locked files.
 Note that the upgrade process forcefully resets the repository to the remote branch,
-so any uncommitted changes will be lost.
+so any uncommitted changes will be lost. The `users.json` file is excluded from
+cleaning, preserving your configured accounts automatically.
 
 ## API Usage
 
