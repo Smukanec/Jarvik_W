@@ -57,7 +57,7 @@ if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/n
     branch="$(git branch --show-current)"
     git fetch "$remote"
     git reset --hard "$remote/$branch"
-    git clean -fd
+    git clean -fd -e users.json
     BEFORE_HASH="$(sha256sum "$0" | awk '{print $1}')"
     if git pull; then
       git submodule update --init --recursive
