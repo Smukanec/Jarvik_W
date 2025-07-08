@@ -28,7 +28,7 @@ from filelock import FileLock
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 # Allow custom model via environment variable
@@ -260,8 +260,9 @@ DEFAULT_MEMORY_FOLDER = "public"
 memory_caches: dict[str, list[dict]] = {}
 memory_locks: dict[str, FileLock] = {}
 ANSWER_DIR = os.getenv("ANSWER_DIR", os.path.join(BASE_DIR, "answers"))
+MEMORY_RETENTION_DAYS = int(os.getenv("MEMORY_RETENTION_DAYS", "7"))
 
-# Jarvik keeps conversation history indefinitely.
+# Jarvik keeps conversation history for a limited time.
 
 app = Flask(__name__, static_folder="static", template_folder="static")
 
@@ -315,8 +316,10 @@ def _read_memory_file(folder: str) -> list[dict]:
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        # Keep the entire history; no size limit is enforced.
 
+        cutoff = None
+        if MEMORY_RETENTION_DAYS > 0:
+            cutoff = datetime.utcnow() - timedelta(days=MEMORY_RETENTION_DAYS)
         pending_user: str | None = None
         for line in lines:
             line = line.strip()
@@ -326,6 +329,30 @@ def _read_memory_file(folder: str) -> list[dict]:
                 obj = json.loads(line)
             except json.JSONDecodeError:
                 logging.warning("Skipping invalid memory line in %s: %s", path, line)
+                continue
+
+            ts_str = obj.get("timestamp")
+            if ts_str:
+                try:
+                    ts = datetime.fromisoformat(ts_str)
+                except ValueError:
+                    ts = None
+            else:
+                dt = obj.get("date")
+                tm = obj.get("time")
+                ts = None
+                if dt and tm:
+                    try:
+                        ts = datetime.fromisoformat(f"{dt}T{tm}")
+                    except ValueError:
+                        ts = None
+                elif dt:
+                    try:
+                        ts = datetime.fromisoformat(f"{dt}T00:00:00")
+                    except ValueError:
+                        ts = None
+            if cutoff and ts and ts < cutoff:
+                pending_user = None
                 continue
 
             if "role" in obj and "message" in obj:
@@ -419,6 +446,10 @@ def append_to_memory(
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry_user) + "\n")
             f.write(json.dumps(entry_assist) + "\n")
+        if MEMORY_RETENTION_DAYS > 0:
+            cutoff = (datetime.utcnow() - timedelta(days=MEMORY_RETENTION_DAYS)).isoformat()
+            if vymazat_memory_range(path, do=cutoff):
+                memory_caches[folder] = _read_memory_file(folder)
 
 
 def flush_memory(folders: list[str] | None = None) -> None:
