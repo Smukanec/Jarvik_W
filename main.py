@@ -1023,6 +1023,7 @@ def knowledge_pending():
                 continue
             if meta.get("status") == "pending_approval":
                 rel = os.path.relpath(os.path.splitext(path)[0] + ".txt", base)
+                rel = rel.replace(os.sep, "/")
                 meta = dict(meta)
                 meta["file"] = rel
                 pending.append(meta)
@@ -1031,11 +1032,12 @@ def knowledge_pending():
 
 def _resolve_public_path(rel: str) -> str:
     rel = rel.lstrip("/\\")
+    rel = rel.replace("/", os.sep)
     full = os.path.abspath(os.path.join(PUBLIC_KNOWLEDGE_FOLDER, rel))
     base = os.path.abspath(PUBLIC_KNOWLEDGE_FOLDER)
     if os.path.commonpath([full, base]) != base:
         raise ValueError("invalid path")
-    return full
+    return os.path.normpath(full)
 
 
 @app.route("/knowledge/approve", methods=["POST"])
