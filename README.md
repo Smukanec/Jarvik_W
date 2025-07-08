@@ -339,6 +339,12 @@ cleaning, preserving your configured accounts automatically. The upgrade script
 uses `git clean -fd -e knowledge` so the `knowledge/` directory is kept and your
 articles remain available after upgrading.
 
+Before cleaning the repository the upgrade script runs `backup_data.sh`. This
+script creates a timestamped archive of the `knowledge/` and `memory/`
+directories inside the `backups/` folder (e.g.
+`backups/backup_20240517_153000.tar.gz`). To restore data simply extract the
+desired archive in the repository root.
+
 ## API Usage
 
 Jarvik exposes a few HTTP endpoints on the configured Flask port

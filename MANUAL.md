@@ -205,3 +205,7 @@ bash upgrade.sh
 ```
 Skript stáhne nové soubory z repozitáře, provede odinstalování, znovu nainstaluje závislosti, obnoví aliasy v `~/.bashrc` a spustí Jarvika.
 Před aktualizací také zastaví běžící procesy Jarvika, aby nedošlo k uzamčení souborů.
+Před vyčištěním repozitáře skript automaticky spouští `backup_data.sh`. Ten uloží
+adresáře `knowledge/` a `memory/` do složky `backups/` jako archiv
+`backup_YYYYMMDD_HHMMSS.tar.gz`. Pro obnovu dat rozbalte zvolený archiv v
+kořenovém adresáři repozitáře.
