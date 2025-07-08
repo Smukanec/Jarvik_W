@@ -181,6 +181,7 @@ Pro zastavení všech služeb a odstranění prostředí použijte:
 bash uninstall_jarvik.sh
 ```
 Skript ukončí Ollamu, spuštěný model i Flask, smaže adresáře `venv/` a `memory/` a vyčistí aliasy z `~/.bashrc`.
+Přepínač `--with-knowledge` navíc odstraní i soubory ve složce `knowledge/`.
 
 Pokud potřebujete Jarvika jen restartovat s jiným modelem, použijte
 
