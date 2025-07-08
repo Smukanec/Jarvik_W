@@ -10,7 +10,8 @@ NC='\033[0m'
 if [ -f stop_all.sh ]; then
   bash stop_all.sh
 fi
-rm -f final_prompt.txt flask.pid
+# Ignore failure if the log is locked on Windows
+rm -f final_prompt.txt flask.pid 2>/dev/null || true
 
 # Remove accidentally tracked files
 if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
