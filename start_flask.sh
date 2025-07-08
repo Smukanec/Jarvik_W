@@ -25,7 +25,7 @@ is_windows() {
 }
 
 if is_windows && command -v powershell.exe >/dev/null 2>&1; then
-  powershell.exe -Command "Get-Process python -ErrorAction SilentlyContinue | Where-Object { \$_.Path -like '*main.py' } | Stop-Process -Force"
+  powershell.exe -Command "$p = Get-CimInstance Win32_Process | Where-Object { \$_.CommandLine -match 'main.py' }; if ($p) { \$p | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force } }"
 else
   pkill -f "python.*${DIR}/main.py" 2>/dev/null || true
 fi
