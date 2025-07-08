@@ -182,6 +182,7 @@ bash uninstall_jarvik.sh
 ```
 Skript ukončí Ollamu, spuštěný model i Flask, smaže adresáře `venv/` a `memory/` a vyčistí aliasy z `~/.bashrc`.
 Přepínač `--with-knowledge` navíc odstraní i soubory ve složce `knowledge/`.
+Poznámka: tento přepínač `--with-knowledge` vymaže i staré znalosti.
 
 Pokud potřebujete Jarvika jen restartovat s jiným modelem, použijte
 

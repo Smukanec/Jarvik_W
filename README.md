@@ -57,16 +57,16 @@ This will append alias commands such as `jarvik-start`, `jarvik-status`,
 available models to your `~/.bashrc` and reload the file. The `jarvik-start`
 alias launches the default OpenChat model.
 
-### Cleaning the knowledge base
+### Wiping old knowledge
 
-If you need to wipe existing articles and start fresh, run:
+Run the helper script if you want to start with a clean knowledge folder:
 
 ```bash
 bash clean_knowledge.sh
 ```
 
-This removes all files and folders under `knowledge/` except for `_index.json`.
-The script waits briefly so you can cancel with Ctrl+C before deletion.
+This command deletes everything under `knowledge/` except `_index.json`. The script pauses briefly so you can abort with Ctrl+C.
+
 
 
 Knowledge files are loaded from the `knowledge/` folder at startup. Jarvik now
