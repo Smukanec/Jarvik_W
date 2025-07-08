@@ -55,6 +55,7 @@ if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/n
     echo -e "${GREEN}⚠️  Neuložené změny budou ztraceny.${NC}"
     remote="$(git remote | head -n 1)"
     branch="$(git branch --show-current)"
+    bash "$DIR/backup_data.sh"
     git fetch "$remote"
     git reset --hard "$remote/$branch"
     git clean -f -d -e users.json -e knowledge
