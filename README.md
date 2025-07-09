@@ -24,11 +24,11 @@ Install dependencies and create the virtual environment:
 bash install_jarvik.sh
 ```
 
-After running the installer, ensure the package `ddgs` is installed. If needed,
+After running the installer, ensure the package `ddgs` (version 9 or newer) is installed. If needed,
 activate the virtual environment and run:
 
 ```bash
-pip install -U ddgs
+pip install -U "ddgs>=9.0.0"
 ```
 
 Make sure the commands `ollama`, `curl`, `lsof` and either `ss` (from
