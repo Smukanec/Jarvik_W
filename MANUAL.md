@@ -22,11 +22,11 @@ Výchozí umístění adresářů `memory/` a `knowledge/` lze změnit pomocí p
    bash install_jarvik.sh --clean
    ```
 
-2. Po skončení instalace zkontrolujte, že je k dispozici balíček `duckduckgo-search`
-    ve verzi 8.0 nebo novější. Pokud chybí, doinstalujte jej v aktivovaném
+2. Po skončení instalace zkontrolujte, že je k dispozici balíček `ddgs`.
+    Pokud chybí, doinstalujte jej v aktivovaném
     virtuálním prostředí příkazem:
    ```bash
-     pip install -U duckduckgo-search>=8.0
+     pip install -U ddgs
    ```
 
 3. Po dokončení instalace načtěte aliasy usnadňující práci se skripty:
