@@ -16,7 +16,8 @@ running locally (defaults to `http://localhost:11434`). When `OLLAMA_URL`
 targets another host the start scripts will not attempt to launch a local
 Ollama instance and all `ollama` commands automatically use the remote server.
 Use `REQUEST_TIMEOUT` to control how long network requests wait for a
-response before failing (defaults to `10` seconds).
+response before failing (defaults to `10` seconds). The `FLASK_DEBUG`
+environment variable toggles Flask's debug mode and defaults to `true`.
 
 ## Installation
 

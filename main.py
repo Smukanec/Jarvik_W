@@ -37,6 +37,8 @@ MODEL_NAME = os.getenv("MODEL_NAME", "openchat")
 FLASK_PORT = int(os.getenv("FLASK_PORT", 8000))
 # Allow choosing the Flask host via environment variable
 FLASK_HOST = os.getenv("FLASK_HOST", "0.0.0.0")
+# Allow toggling Flask debug mode via environment variable
+FLASK_DEBUG = os.getenv("FLASK_DEBUG", "true").lower() in {"1", "true", "yes"}
 # Base URL for the Ollama server
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
@@ -1169,5 +1171,5 @@ def feedback():
     return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
-    app.run(debug=True, host=FLASK_HOST, port=FLASK_PORT)
+    app.run(debug=FLASK_DEBUG, host=FLASK_HOST, port=FLASK_PORT)
 
