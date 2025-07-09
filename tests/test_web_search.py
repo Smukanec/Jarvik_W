@@ -43,7 +43,7 @@ def test_search_and_scrape_handles_exception(monkeypatch):
             pass
 
         def text(self, q, max_results=1, **kwargs):
-            raise web_search.DDGSearchException("ratelimit")
+            raise web_search.DuckDuckGoSearchException("ratelimit")
 
     monkeypatch.setattr(web_search, "DDGS", DummyDDGS)
 

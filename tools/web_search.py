@@ -1,8 +1,8 @@
 try:
-    from ddgs import DDGS, DDGSearchException
-except ImportError:  # older versions don't expose DDGSearchException
+    from ddgs import DDGS, DuckDuckGoSearchException
+except ImportError:  # pragma: no cover - very old ddgs versions
     from ddgs import DDGS  # type: ignore
-    DDGSearchException = Exception  # type: ignore
+    DuckDuckGoSearchException = Exception  # type: ignore
 import requests
 from bs4 import BeautifulSoup
 
@@ -17,7 +17,7 @@ def search_and_scrape(query: str, max_results: int = 1) -> str:
     with DDGS() as ddgs:
         try:
             results = list(ddgs.text(query, max_results=max_results))
-        except DDGSearchException:
+        except DuckDuckGoSearchException:
             results = []
     if not results:
         return "\u26a0\ufe0f \u017d\u00e1dn\u00e9 v\u00fdsledky nenalezeny."
