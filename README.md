@@ -527,8 +527,33 @@ functions:
 - `GITHUB_REPO_URL` – HTTPS address of the repository.
 - `GITHUB_TOKEN` – personal access token with repo permissions.
 
+
 Install the extra dependency `GitPython` and optionally the `gh` CLI if
 you prefer using it for authentication and PR creation.
+
+## Troubleshooting
+
+Verify that the `ollama` binary is available and that the service is
+reachable:
+
+```bash
+ollama --version
+tail -n 20 ollama.log
+```
+
+When you set `OLLAMA_URL` to a remote instance you can test the
+connection with:
+
+```bash
+curl -v "$OLLAMA_URL/api/tags"
+```
+
+The mobile UI lives at `/mobile` and relies on JavaScript from
+`static/app.js`. If the page appears blank, open your browser console and
+check for any errors.
+
+For more information consult the log files:
+`ollama.log`, `<model>.log` and `flask.log`.
 
 ## License
 
