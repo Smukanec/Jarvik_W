@@ -157,6 +157,19 @@ except ValueError:
 # Set base directory relative to this file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
+def jarvik_running() -> bool:
+    """Return ``True`` if a Flask instance appears to be running."""
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.settimeout(1)
+            s.connect(("localhost", FLASK_PORT))
+        except OSError:
+            return False
+    return True
+
 # --- App logging setup ----------------------------------------------------
 MAX_LOG_BYTES = int(os.getenv("MAX_LOG_BYTES", str(1024 * 1024)))
 LOG_BACKUPS = int(os.getenv("LOG_BACKUPS", "3"))
@@ -1128,6 +1141,33 @@ def model_route():
         return resp
 
     return jsonify({"status": "restarting", "model": new_model})
+
+
+@app.route("/start", methods=["POST"])
+@require_auth
+def start_route():
+    """Launch Jarvik by calling ``start_jarvik.sh`` when not running."""
+    if jarvik_running():
+        return jsonify({"status": "already running"})
+
+    script = os.path.join(BASE_DIR, "start_jarvik.sh")
+    try:
+        subprocess.Popen(["bash", script])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"status": "starting"})
+
+
+@app.route("/stop", methods=["POST"])
+@require_auth
+def stop_route():
+    """Stop all Jarvik processes using ``stop_all.sh``."""
+    script = os.path.join(BASE_DIR, "stop_all.sh")
+    try:
+        subprocess.Popen(["bash", script])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"status": "stopping"})
 
 @app.route("/")
 def index():
