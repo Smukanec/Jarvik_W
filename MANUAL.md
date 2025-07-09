@@ -6,6 +6,7 @@ Ve výchozím nastavení je použit model `openchat`. Model lze kdykoli změnit 
 Flask API naslouchá na portu `8000`, který lze změnit proměnnou `FLASK_PORT`.
 Pro vzdálenou Ollamu nastavte proměnnou `OLLAMA_URL` (výchozí
 `http://localhost:11434`).
+Ladicí režim Flasku je zapnutý; vypnete jej nastavením `FLASK_DEBUG=false`.
 Citlivost vyhledávání ve znalostech můžete upravit proměnnou `RAG_THRESHOLD`
 (výchozí hodnota je `0.7`).
 Znalostní soubory lze nahrávat v rozhraní pomocí tlačítka "Nahrát". Ke každému souboru můžete uvést popis, který se uloží do paměti.

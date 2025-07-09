@@ -41,6 +41,7 @@ else
 fi
 
 # Spuštění Flasku
+# Např. FLASK_DEBUG=false bash start_flask.sh vypne debug mód
 python main.py &
 echo $! > "$PID_FILE"
 wait $!
