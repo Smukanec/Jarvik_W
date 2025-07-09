@@ -65,6 +65,19 @@ process_running() {
   fi
 }
 
+# Helper to open the web interface in the default browser
+open_browser() {
+  local url="http://localhost:$FLASK_PORT/"
+  if is_windows; then
+    command -v cmd.exe >/dev/null 2>&1 && cmd.exe /C start "" "$url"
+  else
+    case "$(uname -s)" in
+      Darwin*) command -v open >/dev/null 2>&1 && open "$url" >/dev/null 2>&1 & ;;
+      *) command -v xdg-open >/dev/null 2>&1 && xdg-open "$url" >/dev/null 2>&1 & ;;
+    esac
+  fi
+}
+
 # Potřebujeme také 'ss' nebo 'nc' (případně BusyBox) pro kontrolu běžících portů
 SS_CMD=""
 NC_CMD=""
@@ -173,3 +186,6 @@ if [ "$PORT_OK" -ne 1 ]; then
   exit 1
 fi
 echo -e "${GREEN}✅ Jarvik běží na http://localhost:$FLASK_PORT${NC}"
+if [ -z "$NO_BROWSER" ]; then
+  open_browser
+fi

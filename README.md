@@ -113,6 +113,9 @@ bash start_jarvik.sh
 The script checks for required commands and automatically downloads the
 `openchat` model if it is missing. Po spuštění vypíše, zda se všechny části
 správně nastartovaly, případné chyby hledejte v souborech `*.log`.
+Pokud vše proběhne bez chyb, otevře se výchozí prohlížeč na adrese
+`http://localhost:$FLASK_PORT/`. Nastavte proměnnou prostředí `NO_BROWSER=1`,
+pokud si nepřejete prohlížeč spouštět automaticky.
 With the aliases loaded you can simply type:
 
 ```bash
