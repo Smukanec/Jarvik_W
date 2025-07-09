@@ -139,7 +139,7 @@ def test_ask_openai(client):
     res = client.post("/ask", json={"message": "hi"}, headers=headers)
     assert res.status_code == 200
     assert main._post_calls[-1][0] == main.API_URL
-    assert main._post_calls[-1][1]["timeout"] == 10
+    assert main._post_calls[-1][1]["timeout"] == main.REQUEST_TIMEOUT
 
 
 def test_memory_search(client):
@@ -303,7 +303,7 @@ def test_ask_auto_web_search(client, monkeypatch):
     res = client.post("/ask", json={"message": "hi"}, headers=_auth())
     assert res.status_code == 200
     assert calls
-    assert main._post_calls[-1][1]["timeout"] == 10
+    assert main._post_calls[-1][1]["timeout"] == main.REQUEST_TIMEOUT
     call = main._post_calls[-1][1]["json"]
     prompt = call.get("prompt") or call["messages"][0]["content"]
     assert "web" in prompt
@@ -445,7 +445,7 @@ def test_get_corrections_and_prompt_notes(client):
 
     res = client.post("/ask", json={"message": "hi"}, headers=_auth())
     assert res.status_code == 200
-    assert main._post_calls[-1][1]["timeout"] == 10
+    assert main._post_calls[-1][1]["timeout"] == main.REQUEST_TIMEOUT
     call = main._post_calls[-1][1]["json"]
     if "prompt" in call:
         prompt = call["prompt"]
@@ -486,7 +486,7 @@ def test_prompt_notes_with_mocked_file_and_similarity(client, monkeypatch):
 
     res = client.post("/ask", json={"message": "hi"}, headers=_auth())
     assert res.status_code == 200
-    assert main._post_calls[-1][1]["timeout"] == 10
+    assert main._post_calls[-1][1]["timeout"] == main.REQUEST_TIMEOUT
     call = main._post_calls[-1][1]["json"]
     prompt = call.get("prompt") or call["messages"][0]["content"]
     assert "Poznámka: note" in prompt

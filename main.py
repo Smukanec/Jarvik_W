@@ -46,6 +46,7 @@ API_URL = os.getenv("API_URL", "https://api.openai.com/v1/chat/completions")
 API_MODEL = os.getenv("API_MODEL", os.getenv("OPENAI_MODEL", "gpt-3.5-turbo"))
 API_KEY = os.getenv("API_KEY")
 OPENAI_MODEL = API_MODEL  # backward compatibility
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 10))
 
 # Extended information about supported models. Each entry contains a label shown
 # in the UI, whether web search should be enabled and a short description.
@@ -107,7 +108,7 @@ def call_api(prompt: str, key: str | None = None) -> str:
         API_URL,
         headers=headers,
         json={"model": API_MODEL, "messages": [{"role": "user", "content": prompt}]},
-        timeout=10,
+        timeout=REQUEST_TIMEOUT,
     )
     resp.raise_for_status()
     data = resp.json()
@@ -599,7 +600,7 @@ def ask():
             response = requests.post(
                 f"{OLLAMA_URL}/api/generate",
                 json={"model": MODEL_NAME, "prompt": prompt, "stream": False},
-                timeout=10,
+                timeout=REQUEST_TIMEOUT,
             )
             response.raise_for_status()
             result = response.json()
@@ -662,7 +663,7 @@ def ask_web():
             response = requests.post(
                 f"{OLLAMA_URL}/api/generate",
                 json={"model": MODEL_NAME, "prompt": prompt, "stream": False},
-                timeout=10,
+                timeout=REQUEST_TIMEOUT,
             )
             response.raise_for_status()
             result = response.json()
@@ -746,7 +747,7 @@ def ask_file():
             response = requests.post(
                 f"{OLLAMA_URL}/api/generate",
                 json={"model": MODEL_NAME, "prompt": prompt, "stream": False},
-                timeout=10,
+                timeout=REQUEST_TIMEOUT,
             )
             response.raise_for_status()
             result = response.json()
