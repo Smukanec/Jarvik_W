@@ -24,11 +24,13 @@ command_exists() {
 port_active() {
   local port="$1"
   if command_exists ss; then
-    ss -tuln | grep -q ":$port"
+    ss -tuln | grep LISTEN | grep -q ":$port"
   elif command_exists lsof; then
     lsof -i ":$port" 2>/dev/null | grep -q LISTEN
+  elif command_exists netstat; then
+    netstat -an | grep LISTEN | grep -q ":$port"
   else
-    netstat -an | grep -q ":$port"
+    return 1
   fi
 }
 
