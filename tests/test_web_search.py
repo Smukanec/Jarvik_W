@@ -2,7 +2,7 @@ import os
 import sys
 import pytest
 
-pytest.importorskip("duckduckgo_search")
+pytest.importorskip("ddgs")
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from tools import web_search
@@ -43,7 +43,7 @@ def test_search_and_scrape_handles_exception(monkeypatch):
             pass
 
         def text(self, q, max_results=1, **kwargs):
-            raise web_search.DuckDuckGoSearchException("ratelimit")
+            raise web_search.DDGSearchException("ratelimit")
 
     monkeypatch.setattr(web_search, "DDGS", DummyDDGS)
 

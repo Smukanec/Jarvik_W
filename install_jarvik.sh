@@ -66,10 +66,10 @@ if ! pip install -r requirements.txt; then
   exit 1
 fi
 
-# Upgrade duckduckgo-search to ensure latest version
-echo "⬆️  Aktualizuji duckduckgo-search..."
-if ! pip install -U 'duckduckgo-search>=8.0'; then
-  echo -e "\033[1;33m⚠️  Aktualizace duckduckgo-search selhala. Zkontrolujte připojení k internetu.\033[0m"
+# Upgrade ddgs to ensure latest version
+echo "⬆️  Aktualizuji ddgs..."
+if ! pip install -U ddgs; then
+  echo -e "\033[1;33m⚠️  Aktualizace ddgs selhala. Zkontrolujte připojení k internetu.\033[0m"
   exit 1
 fi
 
