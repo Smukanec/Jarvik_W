@@ -91,6 +91,15 @@ def load_knowledge(folder: str) -> List[str]:
     return _load_folder(folder)
 
 
+def _env_threshold() -> float:
+    """Return the threshold set via ``RAG_THRESHOLD`` or default to 0.7."""
+    env = os.getenv("RAG_THRESHOLD")
+    try:
+        return float(env) if env is not None else 0.7
+    except ValueError:  # pragma: no cover - environment may be invalid
+        return 0.7
+
+
 # ---------------------------------------------------------------------------
 # Vector search implementation
 # ---------------------------------------------------------------------------
@@ -159,13 +168,6 @@ class KnowledgeBase:
         if not self.chunks:
             return []
 
-        def _env_threshold() -> float:
-            env = os.getenv("RAG_THRESHOLD")
-            try:
-                return float(env) if env is not None else 0.7
-            except ValueError:  # pragma: no cover - environment may be invalid
-                return 0.7
-
         if VECTOR_SUPPORT and self.index is not None and self.model is not None:
             if threshold is None:
                 threshold = _env_threshold()
@@ -211,13 +213,6 @@ def search_knowledge(
     query: str, knowledge_chunks: List[str], threshold: float | None = None
 ) -> List[str]:
     """Search a list of paragraphs without creating a persistent instance."""
-
-    def _env_threshold() -> float:
-        env = os.getenv("RAG_THRESHOLD")
-        try:
-            return float(env) if env is not None else 0.7
-        except ValueError:  # pragma: no cover - environment may be invalid
-            return 0.7
 
     if VECTOR_SUPPORT:
         if threshold is None:
