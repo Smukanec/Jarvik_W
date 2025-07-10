@@ -158,18 +158,6 @@ except ValueError:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def jarvik_running() -> bool:
-    """Return ``True`` if a Flask instance appears to be running."""
-    import socket
-
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        try:
-            s.settimeout(1)
-            s.connect(("localhost", FLASK_PORT))
-        except OSError:
-            return False
-    return True
-
 # --- App logging setup ----------------------------------------------------
 MAX_LOG_BYTES = int(os.getenv("MAX_LOG_BYTES", str(1024 * 1024)))
 LOG_BACKUPS = int(os.getenv("LOG_BACKUPS", "3"))
