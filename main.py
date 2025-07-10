@@ -1169,7 +1169,14 @@ def knowledge_reject():
 def model_route():
     """Get or switch the active model."""
     if request.method == "GET":
-        return jsonify({"model": MODEL_NAME})
+        status = "unknown"
+        status_file = os.path.join(BASE_DIR, "startup_status")
+        try:
+            with open(status_file, "r", encoding="utf-8") as f:
+                status = f.read().strip()
+        except OSError:
+            pass
+        return jsonify({"model": MODEL_NAME, "status": status})
 
     data = request.get_json(silent=True) or {}
     new_model = data.get("model")
@@ -1177,6 +1184,12 @@ def model_route():
         return jsonify({"error": "model required"}), 400
 
     script = os.path.join(BASE_DIR, "switch_model.sh")
+    # mark startup status while switching
+    try:
+        with open(os.path.join(BASE_DIR, "startup_status"), "w", encoding="utf-8") as f:
+            f.write("starting")
+    except OSError:
+        pass
     try:
         subprocess.Popen(["bash", script, new_model])
     except Exception as e:
