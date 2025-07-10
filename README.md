@@ -304,10 +304,9 @@ starts Flask you can also use the main start script:
 bash start_jarvik.sh
 ```
 
-Once the server is running you can control it directly from the web
-interface. The dashboard contains **Start Jarvik** and **Stop Jarvik**
-buttons which call the new `/start` and `/stop` endpoints to launch or
-terminate all components.
+Once the server is running it stays active in the background.
+Model switching is handled from the web interface using the
+**Switch model** control, which restarts Jarvik with the selected model.
 
 ## Real-time Monitoring
 
@@ -446,7 +445,7 @@ After logging in you will see the main dashboard with several panels and control
 5. **Answer panel** – the right panel shows the model response. Below it are buttons to mark the reply as good or bad and to send a correction. If saving is enabled a download link to the text file is displayed.
 6. **Additional panels** – context snippets and debug information are shown on the left. You can also expand the *Historie* section to view recent conversation history and inspect status messages.
 7. **Knowledge management** – further controls allow uploading new knowledge files, approving or rejecting pending uploads and deleting memory entries by time range or keyword.
-8. **Service control** – the *Start Jarvik* and *Stop Jarvik* buttons launch or terminate the background processes.
+8. **Service control** – Jarvik runs continuously. Use *Switch model* to restart it with a different model.
 9. **Logout** – use the *Logout* button at the bottom to remove the token and return to the login form.
 
 ## Running Tests
