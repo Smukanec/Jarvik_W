@@ -162,16 +162,33 @@ else
   echo -e "${GREEN}➡️  Používám externí API, model se nespouští${NC}"
 fi
 
-# Spustit Flask
+# Spustit Flask s několika pokusy o spuštění
 echo -e "${GREEN}🌐 Spouštím Flask server...${NC}"
-nohup python3 main.py > flask.log 2>&1 &
-sleep 2
+MAX_ATTEMPTS=5
+ATTEMPT=1
 PORT_OK=0
-if [ -n "$SS_CMD" ] && $SS_CMD -tuln 2>/dev/null | grep -q ":$FLASK_PORT"; then
-  PORT_OK=1
-elif [ -n "$NC_CMD" ] && $NC_CMD -z localhost $FLASK_PORT >/dev/null 2>&1; then
-  PORT_OK=1
-fi
+while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+  if [ $ATTEMPT -gt 1 ]; then
+    echo -e "${RED}❌ Flask se nespustil, pokus $((ATTEMPT-1)). Zkouším znovu...${NC}"
+    echo "---- Retry $ATTEMPT ----" >> flask.log
+  fi
+  if [ $ATTEMPT -eq 1 ]; then
+    nohup python3 main.py > flask.log 2>&1 &
+  else
+    nohup python3 main.py >> flask.log 2>&1 &
+  fi
+  FLASK_PID=$!
+  sleep 2
+  if [ -n "$SS_CMD" ] && $SS_CMD -tuln 2>/dev/null | grep -q ":$FLASK_PORT"; then
+    PORT_OK=1
+  elif [ -n "$NC_CMD" ] && $NC_CMD -z localhost $FLASK_PORT >/dev/null 2>&1; then
+    PORT_OK=1
+  fi
+  [ "$PORT_OK" -eq 1 ] && break
+  kill "$FLASK_PID" 2>/dev/null || true
+  sleep 1
+  ATTEMPT=$((ATTEMPT+1))
+done
 if [ "$PORT_OK" -ne 1 ]; then
   echo -e "${RED}❌ Flask se nespustil, zkontrolujte flask.log${NC}"
   exit 1
