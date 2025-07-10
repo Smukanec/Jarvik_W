@@ -13,6 +13,8 @@ fi
 echo "🔄 Switching to model $NEW_MODEL..."
 
 # Stop running services across platforms
+FLASK_PORT=${FLASK_PORT:-8000}
+
 is_windows() {
   case "$(uname -s)" in
     CYGWIN*|MINGW*|MSYS*) return 0 ;;
@@ -30,6 +32,32 @@ else
   pkill -f "ollama serve" 2>/dev/null
 fi
 sleep 2
+
+# Wait for Flask port to become free before restarting
+SS_CMD=""
+NC_CMD=""
+if command -v ss >/dev/null 2>&1; then
+  SS_CMD="ss"
+elif command -v busybox >/dev/null 2>&1; then
+  SS_CMD="busybox ss"
+fi
+if command -v nc >/dev/null 2>&1; then
+  NC_CMD="nc"
+elif command -v busybox >/dev/null 2>&1; then
+  NC_CMD="busybox nc"
+fi
+
+echo "⌛ Waiting for port $FLASK_PORT to be free..."
+while true; do
+  PORT_IN_USE=0
+  if [ -n "$SS_CMD" ] && $SS_CMD -tuln 2>/dev/null | grep -q ":$FLASK_PORT"; then
+    PORT_IN_USE=1
+  elif [ -n "$NC_CMD" ] && $NC_CMD -z localhost $FLASK_PORT >/dev/null 2>&1; then
+    PORT_IN_USE=1
+  fi
+  [ "$PORT_IN_USE" -eq 0 ] && break
+  sleep 1
+done
 
 if [ "$NEW_MODEL" = "api" ]; then
   MODEL_MODE="api"
