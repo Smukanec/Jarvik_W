@@ -4,6 +4,10 @@ import importlib
 import base64
 import io
 import json
+import threading
+import time
+import socket
+import requests
 import pytest
 
 pytest.importorskip("flask")
@@ -823,4 +827,89 @@ def test_mobile_page(client):
     assert res.status_code == 200
     assert "text/html" in res.content_type
     assert "<!DOCTYPE html>" in res.get_data(as_text=True)
+
+
+def _free_port():
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
+def test_model_restart(monkeypatch, tmp_path):
+    """Server should restart with a new model."""
+    port = _free_port()
+    memory = tmp_path / "mem"
+    knowledge = tmp_path / "know"
+    memory.mkdir()
+    knowledge.mkdir()
+
+    current_main = [None]
+    threads: list[threading.Thread] = []
+
+    def wait_ready():
+        for _ in range(50):
+            try:
+                r = requests.get(f"http://127.0.0.1:{port}/model")
+                if r.status_code == 200:
+                    return
+            except Exception:
+                time.sleep(0.1)
+
+    def start_server(model: str) -> None:
+        def run() -> None:
+            os.environ["MODEL_NAME"] = model
+            os.environ["FLASK_PORT"] = str(port)
+            os.environ["MEMORY_DIR"] = str(memory)
+            os.environ["KNOWLEDGE_DIR"] = str(knowledge)
+            os.environ["TOKEN_LIFETIME_DAYS"] = "1"
+            import importlib
+            import main as m
+            m = importlib.reload(m)
+            current_main[0] = m
+            m.AUTH_ENABLED = False
+            m.subprocess.Popen = fake_popen
+            m.app.run(host="127.0.0.1", port=port, use_reloader=False)
+
+        t = threading.Thread(target=run, daemon=True)
+        threads.append(t)
+        t.start()
+        wait_ready()
+
+    restart_info = {}
+
+    def fake_popen(args, *a, **k):
+        new_model = args[-1]
+        restart_info["model"] = new_model
+
+        def restart() -> None:
+            threads[-1].join()
+            start_server(new_model)
+
+        threading.Thread(target=restart, daemon=True).start()
+
+        class D:
+            pass
+
+        return D()
+
+    start_server("first")
+    res = requests.post(f"http://127.0.0.1:{port}/model", json={"model": "second"})
+    assert res.status_code == 200
+
+    for _ in range(50):
+        try:
+            r = requests.get(f"http://127.0.0.1:{port}/model")
+            if r.status_code == 200 and r.json()["model"] == "second":
+                break
+        except Exception:
+            pass
+        time.sleep(0.1)
+
+    assert r.json()["model"] == "second"
+
+    current_main[0].subprocess.Popen = lambda *a, **k: type("D", (), {})()
+    requests.post(f"http://127.0.0.1:{port}/model", json={"model": "second"})
+    threads[-1].join(timeout=5)
 
