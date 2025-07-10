@@ -5,6 +5,9 @@ NC="\033[0m"
 
 # Allow overriding the Flask port
 FLASK_PORT=${FLASK_PORT:-8000}
+STATUS_FILE="startup_status"
+
+echo "starting" > "$STATUS_FILE"
 
 cd "$(dirname "$0")" || exit
 
@@ -191,9 +194,31 @@ while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
 done
 if [ "$PORT_OK" -ne 1 ]; then
   echo -e "${RED}❌ Flask se nespustil, zkontrolujte flask.log${NC}"
+  echo "error" > "$STATUS_FILE"
   exit 1
 fi
+
+# Wait for Flask to respond
+echo -e "${GREEN}⌛ Čekám na odpověď Flasku...${NC}"
+HTTP_OK=0
+for i in {1..30}; do
+  if curl -sf "http://localhost:$FLASK_PORT/" >/dev/null 2>&1; then
+    HTTP_OK=1
+    break
+  elif [ -n "$NC_CMD" ]; then
+    echo -e "GET / HTTP/1.0\r\n" | $NC_CMD -w 1 localhost $FLASK_PORT >/dev/null 2>&1 && HTTP_OK=1 && break
+  fi
+  sleep 1
+done
+
+if [ "$HTTP_OK" -ne 1 ]; then
+  echo -e "${RED}❌ Port $FLASK_PORT nereaguje${NC}"
+  echo "error" > "$STATUS_FILE"
+  exit 1
+fi
+
 echo -e "${GREEN}✅ Jarvik běží na http://localhost:$FLASK_PORT${NC}"
+echo "running" > "$STATUS_FILE"
 if [ -z "$NO_BROWSER" ]; then
   open_browser
 fi

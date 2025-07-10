@@ -65,3 +65,23 @@ else
   MODEL_MODE="local"
 fi
 MODEL_NAME="$NEW_MODEL" MODEL_MODE="$MODEL_MODE" bash "$DIR/start_jarvik.sh"
+STATUS=$?
+if [ "$STATUS" -ne 0 ]; then
+  echo "❌ Jarvik se nepodařilo spustit"
+  exit "$STATUS"
+fi
+
+# Wait for Flask port to respond
+TIMEOUT=30
+echo "⌛ Waiting for Flask on port $FLASK_PORT..."
+for ((i=0;i<TIMEOUT;i++)); do
+  if curl -sf "http://localhost:$FLASK_PORT/" >/dev/null 2>&1; then
+    echo "✅ Flask responded"
+    exit 0
+  elif command -v nc >/dev/null 2>&1; then
+    echo -e "GET / HTTP/1.0\r\n" | nc -w 1 localhost "$FLASK_PORT" >/dev/null 2>&1 && echo "✅ Flask responded" && exit 0
+  fi
+  sleep 1
+done
+echo "❌ Flask port $FLASK_PORT did not respond"
+exit 1
