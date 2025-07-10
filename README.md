@@ -92,6 +92,8 @@ subfolders listed in `users.json` are loaded for that user in addition to the
 public files. Set the `MEMORY_DIR` or `KNOWLEDGE_DIR` environment variables to
 override these default locations.
 
+Authentication tokens persist in `memory/tokens.json` so sessions survive restarts. Tokens expire after seven days by default; set the `TOKEN_LIFETIME_DAYS` environment variable to change this period.
+
 The similarity threshold for vector search defaults to `0.7`. You can tweak how
 strictly queries match the knowledge base by setting the `RAG_THRESHOLD`
 environment variable to a floating point value.
@@ -430,6 +432,7 @@ An optional API key field is provided and saved in `localStorage` as well. If
 immediately.
 The token is shown in the web interface and can be copied with a button after
 logging in.
+Issued tokens are written to `memory/tokens.json` and expire after seven days by default.
 
 A mobile-friendly version is available at `/mobile`. Open this URL on your
 phone or tablet for a simplified interface.

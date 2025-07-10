@@ -3,6 +3,7 @@ import sys
 import importlib
 import base64
 import io
+import json
 import pytest
 
 pytest.importorskip("flask")
@@ -44,6 +45,12 @@ class DummyResp:
 def client(monkeypatch, tmp_path):
     # Use the dummy knowledge base during import
     monkeypatch.setattr(rag_engine, "KnowledgeBase", DummyKB)
+    monkeypatch.setenv("MEMORY_DIR", str(tmp_path))
+    monkeypatch.setenv("TOKEN_LIFETIME_DAYS", "1")
+    tokens_path = tmp_path / "tokens.json"
+    tokens_path.write_text(
+        json.dumps({"expired": {"nick": "bob", "created": "2000-01-01T00:00:00"}})
+    )
     main = importlib.import_module("main")
     importlib.reload(main)
 
@@ -65,6 +72,7 @@ def client(monkeypatch, tmp_path):
 
     # Isolate memory handling
     monkeypatch.setattr(main, "MEMORY_DIR", str(tmp_path))
+    monkeypatch.setattr(main, "TOKEN_FILE", str(tokens_path))
     main.memory_caches = {
         main.DEFAULT_MEMORY_FOLDER: [
             {"user": "hello", "jarvik": "there"},
@@ -213,6 +221,17 @@ def test_login_and_token(client):
     assert res.status_code == 200
     token = res.get_json()["token"]
     assert main.TOKENS[token] == "bob"
+    with open(main.TOKEN_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    assert token in data
+
+
+def test_expired_tokens_removed(client):
+    import main
+    assert "expired" not in main.TOKENS
+    with open(main.TOKEN_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    assert "expired" not in data
 
 
 def test_per_user_memory(client):

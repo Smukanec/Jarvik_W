@@ -9,7 +9,7 @@ from flask import (
     render_template,
 )
 from werkzeug.utils import secure_filename
-from memory import vymazat_memory_range
+from memory import vymazat_memory_range, _parse_dt
 from rag_engine import (
     KnowledgeBase,
     load_txt_file,
@@ -207,7 +207,63 @@ def log_prompt(prompt: str) -> None:
 USERS_FILE = os.path.join(BASE_DIR, "users.json")
 users = load_users(USERS_FILE)
 AUTH_ENABLED = bool(users)
+
+TOKEN_LIFETIME_DAYS = int(os.getenv("TOKEN_LIFETIME_DAYS", "7"))
+TOKEN_FILE = os.path.join(
+    os.getenv("MEMORY_DIR", os.path.join(BASE_DIR, "memory")), "tokens.json"
+)
 TOKENS: dict[str, str] = {}
+_TOKEN_INFO: dict[str, dict] = {}
+
+
+def _load_tokens() -> None:
+    """Load persisted authentication tokens from disk."""
+    global TOKENS, _TOKEN_INFO
+    if not os.path.exists(TOKEN_FILE):
+        TOKENS = {}
+        _TOKEN_INFO = {}
+        return
+    try:
+        with open(TOKEN_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        data = {}
+
+    now = datetime.now(UTC)
+    TOKENS = {}
+    _TOKEN_INFO = {}
+    changed = False
+    for token, info in list(data.items()):
+        created = _parse_dt(info.get("created"))
+        nick = info.get("nick")
+        if (
+            created
+            and nick
+            and (
+                TOKEN_LIFETIME_DAYS <= 0
+                or now - created <= timedelta(days=TOKEN_LIFETIME_DAYS)
+            )
+        ):
+            TOKENS[token] = nick
+            _TOKEN_INFO[token] = {"nick": nick, "created": created.isoformat()}
+        else:
+            changed = True
+    if changed:
+        _save_tokens()
+
+
+def _save_tokens() -> None:
+    """Persist authentication tokens to disk."""
+    if not _TOKEN_INFO:
+        if os.path.exists(TOKEN_FILE):
+            os.unlink(TOKEN_FILE)
+        return
+    os.makedirs(os.path.dirname(TOKEN_FILE), exist_ok=True)
+    with open(TOKEN_FILE, "w", encoding="utf-8") as f:
+        json.dump(_TOKEN_INFO, f)
+
+
+_load_tokens()
 
 
 def _user_from_basic(auth_header: str) -> User | None:
@@ -508,6 +564,11 @@ def login():
         return jsonify({"error": "invalid credentials"}), 401
     token = secrets.token_hex(16)
     TOKENS[token] = nick
+    _TOKEN_INFO[token] = {
+        "nick": nick,
+        "created": datetime.now(UTC).isoformat(),
+    }
+    _save_tokens()
     return jsonify({"token": token})
 
 def search_memory(query, memory_entries):
