@@ -373,7 +373,9 @@ Jarvik exposes a few HTTP endpoints on the configured Flask port
   of ``RAG_THRESHOLD`` or ``0.6``.
 * `POST /knowledge/reload` – reload the knowledge base and return the number of loaded chunks. This uses the `KnowledgeBase` class to re-read the `knowledge/` directory.
 * `POST /knowledge/upload` – upload a file. Optional fields `private` and `description` mark the file as user-only and store the description in memory.
-* `GET /model` – return the currently running model name.
+* `GET /model` – return the currently running model name and the last startup
+  status. The response contains the fields `model`, `status` and
+  `success`.
 
 * `POST /model` – switch models by posting `{ "model": "name" }`.
 

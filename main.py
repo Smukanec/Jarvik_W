@@ -1176,7 +1176,8 @@ def model_route():
                 status = f.read().strip()
         except OSError:
             pass
-        return jsonify({"model": MODEL_NAME, "status": status})
+        success = status == "running"
+        return jsonify({"model": MODEL_NAME, "status": status, "success": success})
 
     data = request.get_json(silent=True) or {}
     new_model = data.get("model")
