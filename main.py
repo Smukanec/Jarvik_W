@@ -1143,31 +1143,6 @@ def model_route():
     return jsonify({"status": "restarting", "model": new_model})
 
 
-@app.route("/start", methods=["POST"])
-@require_auth
-def start_route():
-    """Launch Jarvik by calling ``start_jarvik.sh`` when not running."""
-    if jarvik_running():
-        return jsonify({"status": "already running"})
-
-    script = os.path.join(BASE_DIR, "start_jarvik.sh")
-    try:
-        subprocess.Popen(["bash", script])
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    return jsonify({"status": "starting"})
-
-
-@app.route("/stop", methods=["POST"])
-@require_auth
-def stop_route():
-    """Stop all Jarvik processes using ``stop_all.sh``."""
-    script = os.path.join(BASE_DIR, "stop_all.sh")
-    try:
-        subprocess.Popen(["bash", script])
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    return jsonify({"status": "stopping"})
 
 @app.route("/")
 def index():

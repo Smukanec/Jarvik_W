@@ -440,43 +440,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  async function startJarvik() {
-    const status = document.getElementById('service-status');
-    if (status) status.textContent = '⏳ Spouštím…';
-    try {
-      const res = await fetch('/start', {
-        method: 'POST',
-        headers: authHeader()
-      });
-      const data = await safeJson(res);
-      if (res.ok) {
-        if (status) status.textContent = '✅ Spouštím';
-      } else if (status) {
-        status.textContent = '❌ ' + (data.error || res.status);
-      }
-    } catch (err) {
-      if (status) status.textContent = '❌ ' + err;
-    }
-  }
-
-  async function stopJarvik() {
-    const status = document.getElementById('service-status');
-    if (status) status.textContent = '⏳ Zastavuji…';
-    try {
-      const res = await fetch('/stop', {
-        method: 'POST',
-        headers: authHeader()
-      });
-      const data = await safeJson(res);
-      if (res.ok) {
-        if (status) status.textContent = '✅ Zastavuji';
-      } else if (status) {
-        status.textContent = '❌ ' + (data.error || res.status);
-      }
-    } catch (err) {
-      if (status) status.textContent = '❌ ' + err;
-    }
-  }
 
   function logout() {
     localStorage.removeItem('token');
@@ -516,8 +479,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.rejectPending = rejectPending;
   window.deleteByTime = deleteByTime;
   window.deleteByKeyword = deleteByKeyword;
-  window.startJarvik = startJarvik;
-  window.stopJarvik = stopJarvik;
   window.logout = logout;
 
   const modelSelect = document.getElementById('model-select');
