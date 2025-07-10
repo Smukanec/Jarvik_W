@@ -4,6 +4,7 @@ echo "🚀 Spouštím Flask server Jarvik..."
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PID_FILE="$DIR/flask.pid"
+FLASK_LOG="$DIR/flask.log"
 
 # Kill any previous Flask instance
 echo "🛑 Zastavuji staré instance Flasku..."
@@ -42,7 +43,15 @@ fi
 
 # Spuštění Flasku
 # Např. FLASK_DEBUG=false bash start_flask.sh vypne debug mód
-python main.py &
-echo $! > "$PID_FILE"
-wait $!
+python main.py > "$FLASK_LOG" 2>&1 &
+FLASK_PID=$!
+echo $FLASK_PID > "$PID_FILE"
+wait $FLASK_PID
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+  FLASK_LOG_PATH=$(realpath "$FLASK_LOG")
+  echo "❌ Flask se nespustil. Podrobnosti naleznete ve $FLASK_LOG_PATH"
+  [ -f "$FLASK_LOG" ] && tail -n 5 "$FLASK_LOG"
+fi
+exit $STATUS
 
