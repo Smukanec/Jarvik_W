@@ -8,6 +8,9 @@ FLASK_PORT=${FLASK_PORT:-8000}
 
 cd "$(dirname "$0")" || exit
 
+# Shared helpers
+source utils.sh
+
 # Model name can be overridden with the MODEL_NAME environment variable
 MODEL_NAME=${MODEL_NAME:-"openchat"}
 # Log file for the model output
@@ -51,18 +54,6 @@ is_windows() {
     CYGWIN*|MINGW*|MSYS*) return 0 ;;
   esac
   [ "$OS" = "Windows_NT" ]
-}
-
-# Cross platform check if a process is running
-process_running() {
-  local pattern="$1"
-  if command -v pgrep >/dev/null 2>&1; then
-    pgrep -f "$pattern" >/dev/null 2>&1
-  elif is_windows && command -v tasklist >/dev/null 2>&1; then
-    tasklist | grep -i "$pattern" >/dev/null 2>&1
-  else
-    ps aux | grep "$pattern" | grep -v grep >/dev/null 2>&1
-  fi
 }
 
 # Helper to open the web interface in the default browser

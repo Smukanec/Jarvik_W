@@ -5,6 +5,9 @@ NC='\033[0m'
 
 cd "$(dirname "$0")" || exit
 
+# Shared helpers
+source utils.sh
+
 # Default model name can be overridden via MODEL_NAME
 MODEL_NAME=${MODEL_NAME:-"openchat"}
 MODEL_LOG="${MODEL_NAME//:/_}.log"
@@ -24,18 +27,6 @@ is_windows() {
     CYGWIN*|MINGW*|MSYS*) return 0 ;;
   esac
   [ "$OS" = "Windows_NT" ]
-}
-
-# Cross platform check if a process is running
-process_running() {
-  local pattern="$1"
-  if command -v pgrep >/dev/null 2>&1; then
-    pgrep -f "$pattern" >/dev/null 2>&1
-  elif is_windows && command -v tasklist >/dev/null 2>&1; then
-    tasklist | grep -i "$pattern" >/dev/null 2>&1
-  else
-    ps aux | grep "$pattern" | grep -v grep >/dev/null 2>&1
-  fi
 }
 
 # Rozpoznat vzdálenou Ollamu
