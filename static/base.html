@@ -137,11 +137,14 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body>
+  <!-- Mobile redirect removed to allow full interface on small screens -->
+  <!--
   <script>
     if (location.pathname === '/' && window.innerWidth <= 600) {
       location.replace('/mobile');
     }
   </script>
+  -->
   <img src="/static/alternativ.png" alt="Jarvik logo">
   <div id="login" style="display:none">
     <input id="nick" placeholder="nick"><br>
