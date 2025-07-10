@@ -339,13 +339,9 @@ def test_memory_add_public(client):
     assert main.memory_caches[main.DEFAULT_MEMORY_FOLDER][-1]["user"] == "qp"
 
 
-def test_knowledge_reload(client, monkeypatch):
+def test_knowledge_reload(client, monkeypatch, reload_spy):
     import main
-    called = []
-
-    def fake_reload():
-        called.append(True)
-
+    called, fake_reload = reload_spy
     main.knowledge.reload = fake_reload
     res = client.post("/knowledge/reload", headers=_auth())
     assert res.status_code == 200
@@ -493,13 +489,11 @@ def test_prompt_notes_with_mocked_file_and_similarity(client, monkeypatch):
     assert open_calls
 
 
-def test_knowledge_upload(client, monkeypatch, tmp_path):
+def test_knowledge_upload(client, monkeypatch, tmp_path, reload_spy):
     import main
     monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
-    called = []
+    called, fake_reload = reload_spy
     main.knowledge.folder = str(tmp_path)
-    def fake_reload():
-        called.append(True)
     main.knowledge.reload = fake_reload
     data = {
         "file": (io.BytesIO(b"hello"), "info.txt"),
@@ -516,15 +510,11 @@ def test_knowledge_upload(client, monkeypatch, tmp_path):
     assert os.path.exists(os.path.join(tmp_path, "info.txt"))
 
 
-def test_knowledge_upload_sanitizes_filename(client, monkeypatch, tmp_path):
+def test_knowledge_upload_sanitizes_filename(client, monkeypatch, tmp_path, reload_spy):
     import main
     monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
-    called = []
+    called, fake_reload = reload_spy
     main.knowledge.folder = str(tmp_path)
-
-    def fake_reload():
-        called.append(True)
-
     main.knowledge.reload = fake_reload
     data = {
         "file": (io.BytesIO(b"hello"), "../evil.txt"),
@@ -544,15 +534,11 @@ def test_knowledge_upload_sanitizes_filename(client, monkeypatch, tmp_path):
     assert os.path.exists(os.path.join(tmp_path, fname))
 
 
-def test_knowledge_upload_records_description(client, monkeypatch, tmp_path):
+def test_knowledge_upload_records_description(client, monkeypatch, tmp_path, reload_spy):
     import main
     monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
-    called = []
+    called, fake_reload = reload_spy
     main.knowledge.folder = str(tmp_path)
-
-    def fake_reload():
-        called.append(True)
-
     main.knowledge.reload = fake_reload
     data = {
         "file": (io.BytesIO(b"hello"), "note.txt"),
@@ -573,18 +559,14 @@ def test_knowledge_upload_records_description(client, monkeypatch, tmp_path):
     assert entry.get("attachments") == ["note.txt"]
 
 
-def test_knowledge_upload_creates_meta(client, monkeypatch, tmp_path):
+def test_knowledge_upload_creates_meta(client, monkeypatch, tmp_path, reload_spy):
     import main
     import os
     import json
 
     monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
-    called = []
+    called, fake_reload = reload_spy
     main.knowledge.folder = str(tmp_path)
-
-    def fake_reload():
-        called.append(True)
-
     main.knowledge.reload = fake_reload
     data = {
         "file": (io.BytesIO(b"hello"), "meta.txt"),
@@ -612,7 +594,7 @@ def test_knowledge_upload_creates_meta(client, monkeypatch, tmp_path):
     assert meta["public"] is True
 
 
-def test_knowledge_upload_suggests_topic(client, monkeypatch, tmp_path):
+def test_knowledge_upload_suggests_topic(client, monkeypatch, tmp_path, reload_spy):
     import main
     import os
     import json
@@ -623,12 +605,8 @@ def test_knowledge_upload_suggests_topic(client, monkeypatch, tmp_path):
         json.dump(index, f)
 
     monkeypatch.setattr(main, "PUBLIC_KNOWLEDGE_FOLDER", str(tmp_path))
-    called = []
+    called, fake_reload = reload_spy
     main.knowledge.folder = str(tmp_path)
-
-    def fake_reload():
-        called.append(True)
-
     main.knowledge.reload = fake_reload
     data = {
         "file": (io.BytesIO(b"dogs are great"), "info.txt"),
