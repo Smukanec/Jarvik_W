@@ -71,17 +71,24 @@ if [ "$STATUS" -ne 0 ]; then
   exit "$STATUS"
 fi
 
-# Wait for Flask port to respond
+# Wait for Flask port to become ready
 TIMEOUT=30
+PORT_READY=0
 echo "⌛ Waiting for Flask on port $FLASK_PORT..."
 for ((i=0;i<TIMEOUT;i++)); do
-  if curl -sf "http://localhost:$FLASK_PORT/" >/dev/null 2>&1; then
-    echo "✅ Flask responded"
-    exit 0
-  elif command -v nc >/dev/null 2>&1; then
-    echo -e "GET / HTTP/1.0\r\n" | nc -w 1 localhost "$FLASK_PORT" >/dev/null 2>&1 && echo "✅ Flask responded" && exit 0
+  if [ -n "$SS_CMD" ] && $SS_CMD -tln 2>/dev/null | grep -q ":$FLASK_PORT"; then
+    PORT_READY=1
+  elif [ -n "$NC_CMD" ] && $NC_CMD -z localhost $FLASK_PORT >/dev/null 2>&1; then
+    PORT_READY=1
+  elif command -v curl >/dev/null 2>&1 && curl -sf "http://localhost:$FLASK_PORT/" >/dev/null 2>&1; then
+    PORT_READY=1
   fi
+  [ "$PORT_READY" -eq 1 ] && break
   sleep 1
 done
-echo "❌ Flask port $FLASK_PORT did not respond"
-exit 1
+
+if [ "$PORT_READY" -ne 1 ]; then
+  echo "❌ Flask port $FLASK_PORT did not respond"
+  exit 1
+fi
+echo "✅ Flask responded"
