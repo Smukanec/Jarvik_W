@@ -6,6 +6,7 @@ NC="\033[0m"
 # Allow overriding the Flask port
 FLASK_PORT=${FLASK_PORT:-8000}
 STATUS_FILE="startup_status"
+FLASK_LOG="$(cd "$(dirname "$0")" && pwd)/flask.log"
 
 echo "starting" > "$STATUS_FILE"
 
@@ -193,7 +194,12 @@ while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
   ATTEMPT=$((ATTEMPT+1))
 done
 if [ "$PORT_OK" -ne 1 ]; then
-  echo -e "${RED}❌ Flask se nespustil, zkontrolujte flask.log${NC}"
+  echo -e "${RED}❌ Flask se nespustil.${NC}"
+  FLASK_LOG_PATH=$(realpath "$FLASK_LOG")
+  echo -e "${RED}Podrobnosti naleznete ve $FLASK_LOG_PATH${NC}"
+  if [ -f "$FLASK_LOG" ]; then
+    tail -n 5 "$FLASK_LOG"
+  fi
   echo "error" > "$STATUS_FILE"
   exit 1
 fi
