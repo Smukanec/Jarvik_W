@@ -1,3 +1,6 @@
 [submodule "DevLab"]
 	path = DevLab
 	url = https://github.com/Smukanec/JARVIK_DevLab.git
+[submodule "Jarvik_connectors"]
+	path = Jarvik_connectors
+	url = https://github.com/Smukanec/Jarvik_connectors.git
