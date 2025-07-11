@@ -622,6 +622,8 @@ def ask():
     data = request.get_json(silent=True)
     data = data or {}
     message = data.get("message", "")
+    if not message:
+        return jsonify({"error": "message required"}), 400
     api_key = request.headers.get("X-API-Key") or data.get("api_key")
     if not api_key and MODEL_MODE == "api":
         api_key = API_KEY
