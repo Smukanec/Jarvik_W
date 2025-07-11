@@ -19,6 +19,14 @@ Use `REQUEST_TIMEOUT` to control how long network requests wait for a
 response before failing (defaults to `10` seconds). The `FLASK_DEBUG`
 environment variable toggles Flask's debug mode and defaults to `true`.
 
+
+The available API endpoints are documented in [openapi.yaml](openapi.yaml). Keep this file updated as routes change. You can view it with Swagger UI, for example:
+
+```bash
+npx swagger-ui-watcher openapi.yaml
+```
+
+Then open the printed URL in your browser.
 ## Installation
 
 Install dependencies and create the virtual environment:
