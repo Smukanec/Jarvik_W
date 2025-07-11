@@ -1,0 +1,485 @@
+openapi: 3.0.3
+info:
+  title: Jarvik API
+  version: 1.0.0
+  description: |
+    OpenAPI specification describing the Flask endpoints provided by Jarvik.
+servers:
+  - url: http://localhost:8000
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+    BearerAuth:
+      type: http
+      scheme: bearer
+paths:
+  /login:
+    post:
+      summary: Obtain an authentication token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nick:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Token issued.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '400':
+          description: Authentication disabled.
+        '401':
+          description: Invalid credentials.
+  /ask:
+    post:
+      summary: Ask the assistant a question.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                api_key:
+                  type: string
+                private:
+                  type: boolean
+      responses:
+        '200':
+          description: Generated response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+        '400':
+          description: Message required.
+        '401':
+          description: Unauthorized.
+        '500':
+          description: Internal error.
+  /ask_web:
+    post:
+      summary: Ask the assistant with mandatory web search.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                api_key:
+                  type: string
+      responses:
+        '200':
+          description: Generated response.
+        '400':
+          description: Message required.
+        '401':
+          description: Unauthorized.
+        '500':
+          description: Internal error.
+  /ask_file:
+    post:
+      summary: Ask the assistant with an optional file upload.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                file:
+                  type: string
+                  format: binary
+                save:
+                  type: boolean
+                private:
+                  type: boolean
+      responses:
+        '200':
+          description: Generated response.
+        '400':
+          description: Message required.
+        '401':
+          description: Unauthorized.
+        '500':
+          description: Internal error.
+  /answers/{filename}:
+    get:
+      summary: Download a previously saved answer file.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File content.
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: File not found.
+  /memory/add:
+    post:
+      summary: Store a conversation entry in memory.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: string
+                jarvik:
+                  type: string
+                private:
+                  type: boolean
+                context:
+                  type: string
+                date:
+                  type: string
+                time:
+                  type: string
+                attachments:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Entry stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        '400':
+          description: Missing user or jarvik text.
+        '401':
+          description: Unauthorized.
+  /memory/search:
+    get:
+      summary: Search memory entries.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Memory entries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          description: Unauthorized.
+  /memory/delete:
+    post:
+      summary: Delete memory entries for the current user.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                from:
+                  type: string
+                to:
+                  type: string
+                keyword:
+                  type: string
+      responses:
+        '200':
+          description: Delete summary.
+        '401':
+          description: Unauthorized.
+  /knowledge/search:
+    get:
+      summary: Search the knowledge base.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: topics
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: threshold
+          in: query
+          required: false
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Search results.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Unauthorized.
+  /knowledge/reload:
+    post:
+      summary: Reload knowledge base files.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Reload status.
+        '401':
+          description: Unauthorized.
+  /knowledge/topics:
+    get:
+      summary: List knowledge base topics.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Topics.
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Unauthorized.
+  /knowledge/upload:
+    post:
+      summary: Upload a text file to the knowledge base.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                private:
+                  type: boolean
+                description:
+                  type: string
+                topic:
+                  type: string
+      responses:
+        '200':
+          description: File uploaded.
+        '400':
+          description: Invalid request.
+        '401':
+          description: Unauthorized.
+  /knowledge/pending:
+    get:
+      summary: List uploaded knowledge files awaiting approval.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Pending file list.
+        '401':
+          description: Unauthorized.
+  /knowledge/approve:
+    post:
+      summary: Approve a knowledge file.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+      responses:
+        '200':
+          description: Approval status.
+        '400':
+          description: Invalid request.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: File not found.
+  /knowledge/reject:
+    post:
+      summary: Reject a knowledge file.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+      responses:
+        '200':
+          description: Rejection status.
+        '400':
+          description: Invalid request.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: File not found.
+  /model:
+    get:
+      summary: Get the current model and status.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current model info.
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Unauthorized.
+    post:
+      summary: Switch to a different model.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model:
+                  type: string
+      responses:
+        '200':
+          description: Restarting with new model.
+        '400':
+          description: Model name required.
+        '401':
+          description: Unauthorized.
+  /feedback:
+    post:
+      summary: Submit feedback about an answer.
+      security:
+        - BasicAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agree:
+                  type: boolean
+                question:
+                  type: string
+                answer:
+                  type: string
+                correction:
+                  type: string
+      responses:
+        '200':
+          description: Feedback stored.
+        '401':
+          description: Unauthorized.
+  /:
+    get:
+      summary: Main HTML page.
+      responses:
+        '200':
+          description: HTML page.
+  /mobile:
+    get:
+      summary: Mobile layout page.
+      responses:
+        '200':
+          description: HTML page.
+  /static/{path}:
+    get:
+      summary: Serve static files.
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File content.
+        '404':
+          description: Not found.
