@@ -154,6 +154,12 @@ def test_ask_openai(client):
     assert main._post_calls[-1][1]["timeout"] == main.REQUEST_TIMEOUT
 
 
+def test_ask_requires_message(client):
+    res = client.post("/ask", json={}, headers=_auth())
+    assert res.status_code == 400
+    assert res.get_json()["error"] == "message required"
+
+
 def test_memory_search(client):
     res = client.get("/memory/search", headers=_auth())
     assert res.status_code == 200
