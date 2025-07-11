@@ -387,8 +387,8 @@ Jarvik exposes a few HTTP endpoints on the configured Flask port
 
 * `POST /ask` – ask Jarvik a question. The conversation is stored in memory. Use
   `?debug=1` or an `X-Debug: 1` header to include debugging details in the
-  response.
-  The same flag works for `/ask_web` and `/ask_file`.
+  response. Values `1`, `true`, or `yes` are accepted. The same flag works for
+  `/ask_web` and `/ask_file`.
 * `POST /memory/add` – manually append a `{ "user": "...", "jarvik": "..." }`
   record to the memory log.
 * `GET /memory/search?q=term` – search stored memory entries. When no query is

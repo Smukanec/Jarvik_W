@@ -48,9 +48,21 @@ paths:
   /ask:
     post:
       summary: Ask the assistant a question.
+      description: Set `debug` query parameter or `X-Debug` header to `1`, `true`, or `yes` to include debug information.
       security:
         - BasicAuth: []
         - BearerAuth: []
+      parameters:
+        - name: debug
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: X-Debug
+          in: header
+          required: false
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -83,9 +95,21 @@ paths:
   /ask_web:
     post:
       summary: Ask the assistant with mandatory web search.
+      description: Set `debug` query parameter or `X-Debug` header to `1`, `true`, or `yes` to include debug information.
       security:
         - BasicAuth: []
         - BearerAuth: []
+      parameters:
+        - name: debug
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: X-Debug
+          in: header
+          required: false
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -109,9 +133,21 @@ paths:
   /ask_file:
     post:
       summary: Ask the assistant with an optional file upload.
+      description: Set `debug` query parameter or `X-Debug` header to `1`, `true`, or `yes` to include debug information.
       security:
         - BasicAuth: []
         - BearerAuth: []
+      parameters:
+        - name: debug
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: X-Debug
+          in: header
+          required: false
+          schema:
+            type: string
       requestBody:
         required: true
         content:
