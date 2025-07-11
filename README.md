@@ -356,6 +356,22 @@ directories inside the `backups/` folder (e.g.
 `backups/backup_20240517_153000.tar.gz`). To restore data simply extract the
 desired archive in the repository root.
 
+## API Setup
+
+The Flask server enables Cross-Origin Resource Sharing (CORS) so web
+applications can call the API from other domains. The feature is provided by
+the `flask-cors` package and activated in `main.py`:
+
+```python
+from flask_cors import CORS
+
+app = Flask(__name__, static_folder="static", template_folder="static")
+CORS(app)
+```
+
+All origins are allowed by default. You can restrict access with
+`CORS(app, resources={r"/*": {"origins": "https://example.com"}})` if needed.
+
 ## API Usage
 
 Jarvik exposes a few HTTP endpoints on the configured Flask port

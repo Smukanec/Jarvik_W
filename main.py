@@ -8,6 +8,7 @@ from flask import (
     url_for,
     render_template,
 )
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from memory import vymazat_memory_range, _parse_dt
 from rag_engine import (
@@ -325,6 +326,7 @@ MEMORY_RETENTION_DAYS = int(os.getenv("MEMORY_RETENTION_DAYS", "7"))
 # Jarvik keeps conversation history for a limited time.
 
 app = Flask(__name__, static_folder="static", template_folder="static")
+CORS(app)
 
 # Načti znalosti při startu
 KNOWLEDGE_DIR = os.getenv("KNOWLEDGE_DIR", os.path.join(BASE_DIR, "knowledge"))

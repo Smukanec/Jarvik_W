@@ -1,4 +1,5 @@
 flask
+flask-cors
 requests
 filelock
 ddgs>=9.0.0
