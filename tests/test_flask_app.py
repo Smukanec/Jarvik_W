@@ -338,6 +338,21 @@ def test_ask_auto_web_search(client, monkeypatch):
     assert "web" in prompt
 
 
+def test_debug_header(client):
+    res = client.post("/ask", json={"message": "hi"}, headers={**_auth(), "X-Debug": "1"})
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "debug" in data and isinstance(data["debug"], list)
+
+
+def test_debug_query_param(client, monkeypatch):
+    import main
+    monkeypatch.setattr(main, "search_and_scrape", lambda q: "web")
+    res = client.post("/ask_web?debug=true", json={"message": "hi"}, headers=_auth())
+    assert res.status_code == 200
+    assert "debug" in res.get_json()
+
+
 def test_memory_add(client):
     import main
     res = client.post(

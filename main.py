@@ -615,9 +615,18 @@ def get_corrections(nick: str, query: str, threshold: float = 0.7) -> list[str]:
         return []
     return notes
 
+
+def debug_requested() -> bool:
+    """Return ``True`` when the request asks for debug information."""
+    flag = request.headers.get("X-Debug")
+    if flag is None:
+        flag = request.args.get("debug")
+    return str(flag).lower() in {"1", "true", "yes", "on"}
+
 @app.route("/ask", methods=["POST"])
 @require_auth
 def ask():
+    debug = debug_requested()
     debug_log = []
     data = request.get_json(silent=True)
     data = data or {}
@@ -675,18 +684,25 @@ def ask():
             output = result.get("response", "").strip()
     except Exception as e:
         debug_log.append(str(e))
-        return jsonify({"error": f"❌ Chyba při komunikaci s Ollamou: {e}", "debug": debug_log}), 500
+        err = {"error": f"❌ Chyba při komunikaci s Ollamou: {e}"}
+        if debug:
+            err["debug"] = debug_log
+        return jsonify(err), 500
 
     private = str(data.get("private", "true")).lower() in {"1", "true", "yes"}
     target_folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
     append_to_memory(message, output, folder=target_folder)
 
-    return jsonify({"response": output, "debug": debug_log})
+    resp = {"response": output}
+    if debug:
+        resp["debug"] = debug_log
+    return jsonify(resp)
 
 
 @app.route("/ask_web", methods=["POST"])
 @require_auth
 def ask_web():
+    debug = debug_requested()
     debug_log = []
     data = request.get_json(silent=True) or {}
     query = data.get("message", "")
@@ -738,18 +754,25 @@ def ask_web():
             output = result.get("response", "").strip()
     except Exception as e:
         debug_log.append(str(e))
-        return jsonify({"error": f"❌ Chyba při komunikaci s Ollamou: {e}", "debug": debug_log}), 500
+        err = {"error": f"❌ Chyba při komunikaci s Ollamou: {e}"}
+        if debug:
+            err["debug"] = debug_log
+        return jsonify(err), 500
 
     private = str(data.get("private", "true")).lower() in {"1", "true", "yes"}
     target_folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
     append_to_memory(query, output, folder=target_folder)
 
-    return jsonify({"response": output, "debug": debug_log})
+    resp = {"response": output}
+    if debug:
+        resp["debug"] = debug_log
+    return jsonify(resp)
 
 
 @app.route("/ask_file", methods=["POST"])
 @require_auth
 def ask_file():
+    debug = debug_requested()
     debug_log = []
     message = request.form.get("message", "")
     api_key = request.headers.get("X-API-Key") or request.form.get("api_key")
@@ -822,10 +845,10 @@ def ask_file():
             output = result.get("response", "").strip()
     except Exception as e:
         debug_log.append(str(e))
-        return (
-            jsonify({"error": f"❌ Chyba při komunikaci s Ollamou: {e}", "debug": debug_log}),
-            500,
-        )
+        err = {"error": f"❌ Chyba při komunikaci s Ollamou: {e}"}
+        if debug:
+            err["debug"] = debug_log
+        return jsonify(err), 500
 
     private = request.form.get("private", "true").lower() in {"1", "true", "yes"}
     target_folder = user.nick if (private and user) else DEFAULT_MEMORY_FOLDER
@@ -869,7 +892,9 @@ def ask_file():
             attachments=attachments,
         )
 
-    resp = {"response": output, "debug": debug_log}
+    resp = {"response": output}
+    if debug:
+        resp["debug"] = debug_log
     if download_url:
         resp["download_url"] = download_url
     return jsonify(resp)
