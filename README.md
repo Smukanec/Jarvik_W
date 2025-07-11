@@ -589,6 +589,18 @@ connection with:
 curl -v "$OLLAMA_URL/api/tags"
 ```
 
+Errors such as `HTTPConnectionPool(...): Read timed out (read timeout=10)`
+mean the Ollama service failed to respond within the configured timeout.
+Increase the limit by setting `REQUEST_TIMEOUT` to a higher value, for
+example:
+
+```bash
+export REQUEST_TIMEOUT=30
+```
+
+and restart Jarvik. Check `ollama.log` or use `curl -v
+"$OLLAMA_URL/api/tags"` to verify the service is reachable.
+
 The mobile UI lives at `/mobile` and relies on JavaScript from
 `static/app.js`. If the page appears blank, open your browser console and
 check for any errors.
