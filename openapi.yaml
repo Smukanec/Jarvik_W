@@ -63,6 +63,11 @@ paths:
           required: false
           schema:
             type: string
+        - name: X-API-Key
+          in: header
+          required: false
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -110,6 +115,11 @@ paths:
           required: false
           schema:
             type: string
+        - name: X-API-Key
+          in: header
+          required: false
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -144,6 +154,11 @@ paths:
           schema:
             type: string
         - name: X-Debug
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: X-API-Key
           in: header
           required: false
           schema:
